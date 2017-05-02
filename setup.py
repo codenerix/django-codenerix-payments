@@ -43,5 +43,6 @@ setup(
     install_requires=[
         'django-codenerix',
         'paypalrestsdk',
+        'pycrypto',
     ]
 )
