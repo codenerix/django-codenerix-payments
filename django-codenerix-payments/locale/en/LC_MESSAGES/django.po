@@ -1,0 +1,172 @@
+# SOME DESCRIPTIVE TITLE.
+# Copyright (C) YEAR THE PACKAGE'S COPYRIGHT HOLDER
+# This file is distributed under the same license as the PACKAGE package.
+# FIRST AUTHOR <EMAIL@ADDRESS>, YEAR.
+#
+#, fuzzy
+msgid ""
+msgstr ""
+"Project-Id-Version: PACKAGE VERSION\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2017-03-28 14:33+0000\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language-Team: LANGUAGE <LL@li.org>\n"
+"Language: \n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+
+#: codenerix_payments/models.py:27
+msgid "Paypal"
+msgstr ""
+
+#: codenerix_payments/models.py:28
+msgid "Redsys"
+msgstr ""
+
+#: codenerix_payments/models.py:29
+msgid "Redsys XML"
+msgstr ""
+
+#: codenerix_payments/models.py:33
+msgid "Confirm"
+msgstr ""
+
+#: codenerix_payments/models.py:34
+msgid "Cancel"
+msgstr ""
+
+#: codenerix_payments/models.py:246 codenerix_payments/models.py:256
+msgid "Name"
+msgstr ""
+
+#: codenerix_payments/models.py:247 codenerix_payments/models.py:257
+msgid "Symbol"
+msgstr ""
+
+#: codenerix_payments/models.py:248
+msgid "ISO 4217 Code"
+msgstr ""
+
+#: codenerix_payments/models.py:249 codenerix_payments/models.py:258
+msgid "Price"
+msgstr ""
+
+#: codenerix_payments/models.py:269 codenerix_payments/models.py:293
+#: codenerix_payments/models.py:682 codenerix_payments/models.py:983
+msgid "Locator"
+msgstr ""
+
+#: codenerix_payments/models.py:270 codenerix_payments/models.py:303
+#: codenerix_payments/models.py:671 codenerix_payments/models.py:965
+msgid "Reference"
+msgstr ""
+
+#: codenerix_payments/models.py:271
+msgid "Order Reference"
+msgstr ""
+
+#: codenerix_payments/models.py:272
+msgid "Reverse"
+msgstr ""
+
+#: codenerix_payments/models.py:274 codenerix_payments/models.py:297
+msgid "Platform"
+msgstr ""
+
+#: codenerix_payments/models.py:275 codenerix_payments/models.py:298
+msgid "Protocol"
+msgstr ""
+
+#: codenerix_payments/models.py:276
+msgid "Real"
+msgstr ""
+
+#: codenerix_payments/models.py:277 codenerix_payments/models.py:302
+#: codenerix_payments/models.py:674 codenerix_payments/models.py:688
+#: codenerix_payments/models.py:966 codenerix_payments/models.py:989
+msgid "Error"
+msgstr ""
+
+#: codenerix_payments/models.py:278 codenerix_payments/models.py:675
+#: codenerix_payments/models.py:967
+msgid "Error Text"
+msgstr ""
+
+#: codenerix_payments/models.py:279 codenerix_payments/models.py:301
+msgid "Cancelled"
+msgstr ""
+
+#: codenerix_payments/models.py:280 codenerix_payments/models.py:299
+#: codenerix_payments/models.py:686 codenerix_payments/models.py:987
+msgid "Total"
+msgstr ""
+
+#: codenerix_payments/models.py:281 codenerix_payments/views.py:47
+msgid "Notes"
+msgstr ""
+
+#: codenerix_payments/models.py:283 codenerix_payments/models.py:969
+#: codenerix_payments/views.py:39 codenerix_payments/views.py:96
+msgid "Request"
+msgstr ""
+
+#: codenerix_payments/models.py:284 codenerix_payments/models.py:970
+#: codenerix_payments/views.py:43 codenerix_payments/views.py:100
+msgid "Answer"
+msgstr ""
+
+#: codenerix_payments/models.py:285 codenerix_payments/models.py:295
+#: codenerix_payments/models.py:971 codenerix_payments/models.py:985
+msgid "Request date"
+msgstr ""
+
+#: codenerix_payments/models.py:286 codenerix_payments/models.py:296
+#: codenerix_payments/models.py:972 codenerix_payments/models.py:986
+msgid "Answer date"
+msgstr ""
+
+#: codenerix_payments/models.py:294 codenerix_payments/models.py:683
+#: codenerix_payments/models.py:984
+msgid "Order"
+msgstr ""
+
+#: codenerix_payments/models.py:300 codenerix_payments/models.py:687
+#: codenerix_payments/models.py:988
+msgid "Currency"
+msgstr ""
+
+#: codenerix_payments/models.py:672 codenerix_payments/models.py:685
+msgid "Action"
+msgstr ""
+
+#: codenerix_payments/models.py:673
+msgid "Data"
+msgstr ""
+
+#: codenerix_payments/models.py:684
+msgid "Created"
+msgstr ""
+
+#: codenerix_payments/models.py:689 codenerix_payments/models.py:990
+msgid "Request Ref"
+msgstr ""
+
+#: codenerix_payments/models.py:690 codenerix_payments/models.py:991
+msgid "Ref"
+msgstr ""
+
+#: codenerix_payments/views.py:23 codenerix_payments/views.py:63
+#: codenerix_payments/views.py:88
+msgid "Information"
+msgstr ""
+
+#: codenerix_payments/views.py:31 codenerix_payments/views.py:67
+#: codenerix_payments/views.py:92
+msgid "Process"
+msgstr ""
+
+#: codenerix_payments/views.py:71
+msgid "Result"
+msgstr ""
