@@ -762,7 +762,7 @@ class PaymentConfirmation(CodenerixModel):
                     self.error = True
                     self.error_txt = json.dumps({'error': error[0], 'errortxt': error[1]})
                     self.save()
-                    raise PaymentError(error)
+                    raise PaymentError(*error)
             
             # Get config
             meta = settings.PAYMENTS.get('meta', {})
@@ -796,7 +796,7 @@ class PaymentConfirmation(CodenerixModel):
             self.error = True
             self.error_txt = json.dumps({'error': error[0], 'errortxt': error[1]})
             self.save()
-            raise PaymentError(error)
+            raise PaymentError(*error)
     
     def __action_paypal(self, config, pr, data, error):
         # Set arguments
