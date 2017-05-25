@@ -26,6 +26,7 @@ import base64
 import time
 import datetime
 import requests
+import math
 from Crypto.Cipher import DES3
 from Crypto.Hash import HMAC, SHA256
 # from suds.client import Client as SOAPClient
@@ -378,7 +379,7 @@ class PaymentRequest(CodenerixModel):
         params = {}
         
         # AMOUNT: 12 Numeric - Last 2 positions are decimals except for YENS
-        amount = int(self.total * 100)
+        amount = int(math.ceil(float(self.total) * 100))
         params['DS_MERCHANT_AMOUNT'] = str(amount)
         
         # Sanity check for total amount to charge
