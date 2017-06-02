@@ -536,7 +536,16 @@ class PaymentRequest(CodenerixModel):
         else:
             new = True
             # Autoset locator
-            self.locator = hashlib.sha1(str(time.time()) + str(datetime.datetime.now().microsecond)).hexdigest()
+
+            info_decode = str(time.time()) + str(datetime.datetime.now().microsecond)
+            try:
+                # python 2.7
+                self.locator = hashlib.sha1(info_decode).hexdigest()
+            except TypeError:
+                # python 3.x
+                info_encode = bytes(info_decode, encoding='utf-8')
+                self.locator = hashlib.sha1(info_encode).hexdigest()
+                
             # Autoset environment
             self.real = settings.PAYMENTS.get('meta', {}).get('real', False)
             # Autoset protocol
