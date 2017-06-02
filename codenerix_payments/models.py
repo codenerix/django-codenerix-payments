@@ -273,6 +273,9 @@ class Currency(CodenerixModel):
     
     def __unicode__(self):
         return u"{0} ({1})".format(smart_text(self.name), smart_text(self.symbol))
+
+    def __str__(self):
+        return self.__unicode__()
     
     def __fields__(self, info):
         fields = []
@@ -322,6 +325,9 @@ class PaymentRequest(CodenerixModel):
     
     def __unicode__(self):
         return u"PayReq({0}):{1}_{2}:{3}|{4}:{5}[{6}]".format(self.pk, self.locator, self.platform, self.protocol, self.ref, self.total, self.order)
+
+    def __str__(self):
+        return self.__unicode__()
     
     def __fields__(self, info):
         fields = []
@@ -457,7 +463,10 @@ class PaymentRequest(CodenerixModel):
         
         # Build the request
         paramsjson = json.dumps(params).encode()
-        paramsb64 = ''.join(unicode(base64.encodestring(paramsjson), 'utf-8').splitlines())
+        try:
+            paramsb64 = ''.join(unicode(base64.encodestring(paramsjson), 'utf-8').splitlines())
+        except NameError:
+            paramsb64 = ''.join(base64.encodestring(paramsjson), 'utf-8').splitlines()
         # params64 = base64.b64encode(paramsjson)
         
         # Build the signature
@@ -718,6 +727,9 @@ class PaymentConfirmation(CodenerixModel):
     
     def __unicode__(self):
         return u"PayConf:{0}-{1}".format(self.payment, self.ref)
+
+    def __str__(self):
+        return self.__unicode__()
 
     def __fields__(self, info):
         fields = []
@@ -1025,6 +1037,9 @@ class PaymentAnswer(CodenerixModel):
         else:
             error = 'OK'
         return u"PayAns:{0}-{1}::{2}".format(self.payment, self.ref, error)
+
+    def __str__(self):
+        return self.__unicode__()
     
     def __fields__(self, info):
         fields = []
