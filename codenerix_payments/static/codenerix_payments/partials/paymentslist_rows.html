@@ -1,0 +1,18 @@
+<td>{{row.locator|codenerix}}</td>
+<td>{{row.order|codenerix}}</td>
+<td>{{row.request_date|codenerix}}</td>
+<td>{{row.answer_date|codenerix}}</td>
+<td>{{row.platform|codenerix}}</td>
+<td>{{row.protocol|codenerix}}</td>
+<td>{{row.total|codenerix}}</td>
+<td>{{row.currency|codenerix}}</td>
+<td><span codenerix-html-compile='row.cancelled|codenerix'></td>
+<td><span codenerix-html-compile='row.error|codenerix'></td>
+<td>{{row.ref|codenerix}}</td>
+<td>
+    <form ng-if='row.get_approval.form' target='{{row.get_approval.url}}'>
+        <input ng-repeat='(key, value) in row.get_approval.form' type='text' name='{{key}}' value='{{value}}'>
+        <input type='submit' value='data.meta.gentranslate.pay'>
+    </form>
+    <button ng-if='!row.get_approval.form' href='{{row.get_approval.url}}'>{{data.meta.gentranslate.pay}}</button>
+</td>

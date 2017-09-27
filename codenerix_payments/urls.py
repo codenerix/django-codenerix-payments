@@ -20,16 +20,21 @@
 
 from django.conf.urls import url
 
-from codenerix_payments.views import PaymentRequestList, PaymentConfirmationList, PaymentAnswerList, PaymentAction, \
-    PaymentRequestDetail, PaymentConfirmationDetail, PaymentAnswerDetail
+from codenerix_payments.views import PaymentRequestList, PaymentRequestCreate, PaymentRequestUpdate, PaymentRequestDelete, \
+    PaymentConfirmationList, PaymentAnswerList, PaymentAction, \
+    PaymentRequestDetail, PaymentConfirmationDetail, PaymentAnswerDetail, PaymentPlatforms
 
 
 urlpatterns = [
     url(r'^paymentrequests$', PaymentRequestList.as_view(), name='paymentrequest_list'),
+    url(r'^paymentrequests/add$', PaymentRequestCreate.as_view(), name='paymentrequest_list'),
     url(r'^paymentrequests/(?P<pk>\w+)$', PaymentRequestDetail.as_view(), name='paymentrequest_detail'),
+    url(r'^paymentrequests/(?P<pk>\w+)/edit$', PaymentRequestUpdate.as_view(), name='paymentrequest_update'),
+    url(r'^paymentrequests/(?P<pk>\w+)/delete$', PaymentRequestDelete.as_view(), name='paymentrequest_delete'),
     url(r'^paymentconfirmations$', PaymentConfirmationList.as_view(), name='paymentconfirmation_list'),
     url(r'^paymentconfirmations/(?P<pk>\w+)$', PaymentConfirmationDetail.as_view(), name='paymentconfirmation_detail'),
     url(r'^paymentanswers$', PaymentAnswerList.as_view(), name='paymentanswer_list'),
     url(r'^paymentanswers/(?P<pk>\w+)$', PaymentAnswerDetail.as_view(), name='paymentanswer_detail'),
     url(r'^action/(?P<locator>[a-zA-Z0-9+/]+)/(?P<action>\w+)/$', PaymentAction.as_view(), name='payment_url'),
+    url(r'^platforms/(?P<search>[\w\W]+|\*)$', PaymentPlatforms.as_view(), name='CDNX_payments_platforms'),
 ]

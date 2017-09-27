@@ -76,14 +76,14 @@ def redsys_signature(authkey, order, paramsb64, recode=False):
     iv = b'\0\0\0\0\0\0\0\0'
     k = DES3.new(authkey, DES3.MODE_CBC, iv)
     ceros = b'\0' * (len(order) % 8)
-    claveOp = k.encrypt(order + ceros.encode('UTF-8'))
+    claveOp = k.encrypt(order + ceros.decode())
 
     # Realizo la codificacion SHA256
-    dig = HMAC.new(claveOp, msg=paramsb64, digestmod=SHA256).digest()
+    dig = HMAC.new(claveOp, msg=paramsb64.encode(), digestmod=SHA256).digest()
     signature = base64.b64encode(dig)
     if recode:
         signature = signature.replace("+", "-").replace("/", "_")
-    return signature
+    return signature.decode()
 
 
 def redsys_error(code):
@@ -342,6 +342,8 @@ class PaymentRequest(CodenerixModel):
         fields.append(('cancelled', _('Cancelled'), 100))
         fields.append(('error', _('Error'), 100))
         fields.append(('ref', _('Reference'), 100))
+        if getattr(settings, 'CDNX_PAYMENTS_REQUEST_PAY', False):
+            fields.append(('get_approval', _('Pay'), 100))
         return fields
 
     def get_approval(self):
@@ -463,11 +465,11 @@ class PaymentRequest(CodenerixModel):
 
         # Build the request
         paramsjson = json.dumps(params).encode()
-        try:
-            paramsb64 = ''.join(unicode(base64.encodestring(paramsjson), 'utf-8').splitlines())
-        except NameError:
-            paramsb64 = ''.join(base64.encodestring(paramsjson), 'utf-8').splitlines()
-        # params64 = base64.b64encode(paramsjson)
+        paramsb64 = base64.b64encode(paramsjson).decode()
+        # try:
+        #    paramsb64 = ''.join(unicode(base64.encodestring(paramsjson), 'utf-8')).splitlines()
+        # except NameError:
+        #    paramsb64 = ''.join(base64.encodestring(paramsjson)).splitlines()
 
         # Build the signature
         signature = redsys_signature(authkey, params['DS_MERCHANT_ORDER'], paramsb64)
@@ -551,8 +553,17 @@ class PaymentRequest(CodenerixModel):
             if self.protocol is None:
                 raise PaymentError(8, "Unknown platform '{}'".format(self.platform))
 
+        # If no orther specified
+        auto_set_order = not self.order
+        if auto_set_order:
+            self.order = 0
+
         # Save the model like always
         m = super(PaymentRequest, self).save(*args, **kwargs)
+
+        # Autoset order
+        if auto_set_order:
+            self.order = self.pk
 
         # Execute specific actions for the payment system
         if new:
