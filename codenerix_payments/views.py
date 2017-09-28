@@ -283,14 +283,14 @@ class PaymentAction(View):
                             pc.confirm(pr, request.GET)
                             pc.payment.notify(request)
                         except PaymentError as e:
-                            answer['error'] = 'PC{:02d}'.format(e[0])
+                            answer['error'] = 'PC{:02d}'.format(e.args[0])
 
                     elif action == 'cancel':
                         pc = PaymentConfirmation()
                         try:
                             pc.cancel(pr, request.GET)
                         except PaymentError as e:
-                            answer['error'] = 'PC{:02d}'.format(e[0])
+                            answer['error'] = 'PC{:02d}'.format(e.args[0])
                     else:
                         # ERROR: Unknown action for paypal (only allowed 'confirm' or 'cancel'
                         answer['error'] = 'P004'
@@ -315,21 +315,21 @@ class PaymentAction(View):
                         except PaymentError as e:
                             F.write("{} - NOTIFY Error - {}\n".format(now, e))
                             F.flush()
-                            answer['error'] = 'PS{:02d}'.format(e[0])
+                            answer['error'] = 'PS{:02d}'.format(e.args[0])
 
                     elif action == 'confirm':
                         pc = PaymentConfirmation()
                         try:
                             pc.confirm(pr, request.GET)
                         except PaymentError as e:
-                            answer['error'] = 'PC{:02d}'.format(e[0])
+                            answer['error'] = 'PC{:02d}'.format(e.args[0])
 
                     elif action == 'cancel':
                         pc = PaymentConfirmation()
                         try:
                             pc.cancel(pr, request.GET)
                         except PaymentError as e:
-                            answer['error'] = 'PC{:02d}'.format(e[0])
+                            answer['error'] = 'PC{:02d}'.format(e.args[0])
                     else:
                         # ERROR: Unknown action for redsys/redsysxml (only allowed 'success', 'confirm' or 'cancel'
                         answer['error'] = 'P003'

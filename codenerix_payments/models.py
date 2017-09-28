@@ -80,10 +80,10 @@ def redsys_signature(authkey, order, paramsb64, recode=False):
 
     # Realizo la codificacion SHA256
     dig = HMAC.new(claveOp, msg=paramsb64.encode(), digestmod=SHA256).digest()
-    signature = base64.b64encode(dig)
+    signature = base64.b64encode(dig).decode()
     if recode:
         signature = signature.replace("+", "-").replace("/", "_")
-    return signature.decode()
+    return signature
 
 
 def redsys_error(code):
@@ -954,7 +954,7 @@ class PaymentConfirmation(CodenerixModel):
                     elif key == 'Ds_MerchantParameters':
                         paramsb64 = value
                         try:
-                            params = json.loads(base64.b64decode(paramsb64).encode())
+                            params = json.loads(base64.b64decode(paramsb64).decode())
                         except Exception:
                             params = None
                     elif key == 'Ds_Signature':
