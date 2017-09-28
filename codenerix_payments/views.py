@@ -374,8 +374,13 @@ class PaymentConfirmationAutorender(View):
         else:
             pr = None
 
+        # Check if it is already paid
+        paid = pr.paymentanswers.filter(ref__isnull=False)
+
         # Build context
         context = {}
+        context['request'] = pr
+        context['confirmation'] = paid
         context['error'] = kwargs.get('error', None)
         context['action'] = kwargs.get('action', None)
 

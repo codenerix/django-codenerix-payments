@@ -1,1 +1,19 @@
-CONFIRMATION
+<h1>{% trans "PAYMENT CONFIRMATION" %}</h1>
+<br/>
+<table>
+    <tr>
+        <td>{% trans "Action" %}:</td>
+        <td>{{action}}</td>
+        <td>{% trans "Error" %}:</td>
+        <td>{{error}}</td>
+    </tr>
+    <tr>
+        <td>{% "Requested" %}:</td>
+        <td>{{request.request_date}}</td>
+        <td>{% "Answered" %}</td>
+        <td>{{confirmation.answer_date}}</td>
+    </tr>
+    <tr>
+        <td colspan="4">{%if confimation%}{% trans "CONFIRMED" %}{%else%}{% trans "NO CONFIRMED" %}{%endif%}</td>
+    </tr>
+</table>
