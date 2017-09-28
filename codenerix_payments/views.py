@@ -26,7 +26,9 @@ from django.utils.decorators import method_decorator
 from django.views.decorators.csrf import csrf_exempt
 from django.http import HttpResponse, HttpResponseRedirect
 from django.utils.translation import ugettext_lazy as _, ugettext as __
+from django.contrib.auth.decorators import login_required
 from django.conf import settings
+from django.shortcuts import render
 
 from codenerix.views import GenList, GenDetail, GenCreate, GenUpdate, GenDelete, GenForeignKey
 
@@ -72,7 +74,7 @@ class PaymentRequestCreate(GenCreate):
         # Set missing variables in the instance
         form.instance.alternative = True
         form.instance.order = 0
-        form.instance.reverse = "reverse"
+        form.instance.reverse = "autorender"
         form.instance.currency = currency
         form.instance.protocol = profile['protocol']
 
@@ -347,10 +349,25 @@ class PaymentAction(View):
             if answer_json:
                 return HttpResponse(json.dumps(answer), content_type='application/json')
             else:
-                return HttpResponseRedirect(reverse(pr.reverse, kwargs=answer))
+                if pr.reverse == 'autorender':
+                    return HttpResponseRedirect(reverse('CNDX_PaymentConfirm', kwargs=answer))
+                else:
+                    return HttpResponseRedirect(reverse(pr.reverse, kwargs=answer))
 
             # GET:  <QueryDict: {}>
             # POST: <QueryDict: {u'Ds_Signature': [u'cURiymdHBZof0dhnWCHki7muP59t9o5SNJy5nVLrGew='], u'Ds_MerchantParameters': [u'eyJEc19EYXRlIjoiMjNcLzA4XC8yMDE2IiwiRHNfSG91ciI6IjE3OjUyIiwiRHNfU2VjdXJlUGF5bWVudCI6IjEiLCJEc19DYXJkX051bWJlciI6IjQ1NDg4MSoqKioqKjAwMDQiLCJEc19DYXJkX0NvdW50cnkiOiI3MjQiLCJEc19BbW91bnQiOiIxMjAwIiwiRHNfQ3VycmVuY3kiOiI5NzgiLCJEc19PcmRlciI6IjAwMDAwMDE1IiwiRHNfTWVyY2hhbnRDb2RlIjoiOTk5MDA4ODgxIiwiRHNfVGVybWluYWwiOiIwMDEiLCJEc19SZXNwb25zZSI6IjAwMDAiLCJEc19NZXJjaGFudERhdGEiOiIiLCJEc19UcmFuc2FjdGlvblR5cGUiOiIwIiwiRHNfQ29uc3VtZXJMYW5ndWFnZSI6IjEiLCJEc19BdXRob3Jpc2F0aW9uQ29kZSI6IjYyOTE3OCJ9'], u'Ds_SignatureVersion': [u'HMAC_SHA256_V1']}>
             # REQUEST: <WSGIRequest: POST '/payments/action/15/success/'>
             # ARGS: ()
             # KWARGS: {'action': u'success', 'cid': u'15'}
+
+
+class PaymentConfirmationAutorender(View):
+    template_name = 'codenerix_payments/confirmation.html'
+
+    @method_decorator(login_required)
+    def get(self, request, *args, **kwargs):
+        # locator = kwargs.get('locator', None)
+        context = {}
+        context['error'] = kwargs.get('error', None)
+        context['action'] = kwargs.get('action', None)
+        return render(request, self.template_name, context)

@@ -22,7 +22,7 @@ from django.conf.urls import url
 
 from codenerix_payments.views import PaymentRequestList, PaymentRequestCreate, PaymentRequestUpdate, PaymentRequestDelete, \
     PaymentConfirmationList, PaymentAnswerList, PaymentAction, \
-    PaymentRequestDetail, PaymentConfirmationDetail, PaymentAnswerDetail, PaymentPlatforms
+    PaymentRequestDetail, PaymentConfirmationDetail, PaymentAnswerDetail, PaymentPlatforms, PaymentConfirmationAutorender
 
 
 urlpatterns = [
@@ -37,4 +37,5 @@ urlpatterns = [
     url(r'^paymentanswers/(?P<pk>\w+)$', PaymentAnswerDetail.as_view(), name='paymentanswer_detail'),
     url(r'^action/(?P<locator>[a-zA-Z0-9+/]+)/(?P<action>\w+)/$', PaymentAction.as_view(), name='payment_url'),
     url(r'^platforms/(?P<search>[\w\W]+|\*)$', PaymentPlatforms.as_view(), name='CDNX_payments_platforms'),
+    url(r'^confirmation$', PaymentConfirmationAutorender.as_view(), name='paymentconfirmation_autorender'),
 ]
