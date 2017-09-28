@@ -1200,8 +1200,7 @@ class PaymentAnswer(CodenerixModel):
                     elif key == 'Ds_MerchantParameters':
                         paramsb64 = value
                         try:
-                            params =
-                            json.loads(base64.b64decode(paramsb64).decode())
+                            params = json.loads(base64.b64decode(paramsb64).decode())
                         except Exception:
                             params = None
                     elif key == 'Ds_Signature':
