@@ -1,19 +1,24 @@
+{% load i18n %}
 <h1>{% trans "PAYMENT CONFIRMATION" %}</h1>
-<br/>
 <table>
+    <tr><td><u>{% trans "Action" %}:</u></td><td>{{action}}</td></tr>
+    <tr><td><u>{% trans "Error" %}:</u></td><td>{{error}}</td></tr>
+    <tr><td><u>{% trans "Requested" %}:</u></td><td>{{request.request_date}}</td></tr>
+    {% if confirmation %}
+        <tr><td><u>{% trans "Answered" %}:</u></td><td>{{confirmation.answer_date}}</td></tr>
+    {% endif %}
     <tr>
-        <td>{% trans "Action" %}:</td>
-        <td>{{action}}</td>
-        <td>{% trans "Error" %}:</td>
-        <td>{{error}}</td>
-    </tr>
-    <tr>
-        <td>{% "Requested" %}:</td>
-        <td>{{request.request_date}}</td>
-        <td>{% "Answered" %}</td>
-        <td>{{confirmation.answer_date}}</td>
-    </tr>
-    <tr>
-        <td colspan="4">{%if confimation%}{% trans "CONFIRMED" %}{%else%}{% trans "NO CONFIRMED" %}{%endif%}</td>
+        <td>
+            <u>{% trans "Status" %}:</u>
+        </td>
+        <td>
+            <b>
+            {% if confirmation %}
+                <font color='green'>{% trans "CONFIRMED" %}</font>
+            {% else %}
+                <font color='red'>{% trans "NOT CONFIRMED" %}</font>
+            {% endif %}
+            </b>
+        </td>
     </tr>
 </table>

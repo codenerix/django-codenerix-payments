@@ -375,7 +375,7 @@ class PaymentConfirmationAutorender(View):
             pr = None
 
         # Check if it is already paid
-        paid = pr.paymentanswers.filter(ref__isnull=False)
+        paid = pr.paymentanswers.filter(ref__isnull=False).first()
 
         # Build context
         context = {}
