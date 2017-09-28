@@ -72,6 +72,7 @@ class PaymentRequestCreate(GenCreate):
         # Set missing variables in the instance
         form.instance.alternative = True
         form.instance.order = 0
+        form.instance.reverse = "reverse"
         form.instance.currency = currency
         form.instance.protocol = profile['protocol']
 
