@@ -350,7 +350,7 @@ class PaymentAction(View):
                 return HttpResponse(json.dumps(answer), content_type='application/json')
             else:
                 if pr.reverse == 'autorender':
-                    return HttpResponseRedirect(reverse('CNDX_PaymentConfirm', kwargs=answer))
+                    return HttpResponseRedirect(reverse('CNDX_payments_confirmation', kwargs=answer))
                 else:
                     return HttpResponseRedirect(reverse(pr.reverse, kwargs=answer))
 

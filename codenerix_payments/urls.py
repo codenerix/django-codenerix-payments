@@ -37,5 +37,5 @@ urlpatterns = [
     url(r'^paymentanswers/(?P<pk>\w+)$', PaymentAnswerDetail.as_view(), name='paymentanswer_detail'),
     url(r'^action/(?P<locator>[a-zA-Z0-9+/]+)/(?P<action>\w+)/$', PaymentAction.as_view(), name='payment_url'),
     url(r'^platforms/(?P<search>[\w\W]+|\*)$', PaymentPlatforms.as_view(), name='CDNX_payments_platforms'),
-    url(r'^confirmation$', PaymentConfirmationAutorender.as_view(), name='paymentconfirmation_autorender'),
+    url(r'^confirmation$', PaymentConfirmationAutorender.as_view(), name='CNDX_payments_confirmation'),
 ]
