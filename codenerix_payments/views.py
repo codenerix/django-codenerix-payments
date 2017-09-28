@@ -366,8 +366,18 @@ class PaymentConfirmationAutorender(View):
 
     @method_decorator(login_required)
     def get(self, request, *args, **kwargs):
-        # locator = kwargs.get('locator', None)
+
+        # Get PaymentRequest if any
+        locator = kwargs.get('locator', None)
+        if locator:
+            pr = PaymentRequest.objects.filter(locator=locator).first()
+        else:
+            pr = None
+
+        # Build context
         context = {}
         context['error'] = kwargs.get('error', None)
         context['action'] = kwargs.get('action', None)
+
+        # Render
         return render(request, self.template_name, context)

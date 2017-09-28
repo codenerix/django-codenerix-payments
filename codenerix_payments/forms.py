@@ -29,6 +29,7 @@ class PaymentRequestForm(GenModelForm):
         model = PaymentRequest
         exclude = [
             'locator',
+            'ref',
             'order',
             'reverse',
             'currency',
@@ -46,9 +47,8 @@ class PaymentRequestForm(GenModelForm):
     def __groups__(self):
         g = [
             (_('Details'), 12,
-                ['ref', 4],
-                ['total', 4],
-                ['platform', 4],
+                ['total', 6],
+                ['platform', 6],
                 ['notes', 12],)
         ]
         return g
@@ -59,6 +59,7 @@ class PaymentRequestUpdateForm(GenModelForm):
         model = PaymentRequest
         exclude = [
             'total',
+            'ref',
             'platform',
             'locator',
             'order',
