@@ -433,7 +433,7 @@ class PaymentRequest(CodenerixModel):
 
         # Prepare configuration
         code = config.get('merchant_code', '')
-        authkey = base64.b64decode(config.get('auth_key', '').decode())
+        authkey = base64.b64decode(config.get('auth_key', ''))
         success_url = urlsuccess + reverse('payment_url', kwargs={'action': 'success', 'locator': self.locator})
         return_url = urllink + reverse('payment_url', kwargs={'action': 'confirm', 'locator': self.locator})
         cancel_url = urllink + reverse('payment_url', kwargs={'action': 'cancel', 'locator': self.locator})
@@ -937,7 +937,7 @@ class PaymentConfirmation(CodenerixModel):
         else:
 
             # Get authkey
-            authkey = base64.b64decode(config.get('auth_key', '').decode())
+            authkey = base64.b64decode(config.get('auth_key', ''))
 
             # Set arguments
             signature = None
@@ -954,7 +954,7 @@ class PaymentConfirmation(CodenerixModel):
                     elif key == 'Ds_MerchantParameters':
                         paramsb64 = value
                         try:
-                            params = json.loads(base64.b64decode(paramsb64).decode())
+                            params = json.loads(base64.b64decode(paramsb64).encode())
                         except Exception:
                             params = None
                     elif key == 'Ds_Signature':
@@ -1200,7 +1200,7 @@ class PaymentAnswer(CodenerixModel):
                     elif key == 'Ds_MerchantParameters':
                         paramsb64 = value
                         try:
-                            params = json.loads(base64.b64decode(paramsb64).decode())
+                            params = json.loads(base64.b64decode(paramsb64))
                         except Exception:
                             params = None
                     elif key == 'Ds_Signature':
@@ -1210,7 +1210,7 @@ class PaymentAnswer(CodenerixModel):
                 if signature and signature_version and paramsb64 and params:
 
                     # Get authkey
-                    authkey = base64.b64decode(settings.PAYMENTS.get(self.payment.platform, {}).get('auth_key', '').decode())
+                    authkey = base64.b64decode(settings.PAYMENTS.get(self.payment.platform, {}).get('auth_key', ''))
 
                     # Check version
                     if signature_version == 'HMAC_SHA256_V1':
