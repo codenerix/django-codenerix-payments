@@ -27,9 +27,9 @@ from codenerix_payments.views import PaymentRequestList, PaymentRequestCreate, P
 
 urlpatterns = [
     url(r'^paymentrequests$', PaymentRequestList.as_view(), name='paymentrequest_list'),
-    url(r'^paymentrequests/add$', PaymentRequestCreate.as_view(), name='paymentrequest_list'),
+    url(r'^paymentrequests/add$', PaymentRequestCreate.as_view(), name='paymentrequest_add'),
     url(r'^paymentrequests/(?P<pk>\w+)$', PaymentRequestDetail.as_view(), name='paymentrequest_detail'),
-    url(r'^paymentrequests/(?P<pk>\w+)/edit$', PaymentRequestUpdate.as_view(), name='paymentrequest_update'),
+    url(r'^paymentrequests/(?P<pk>\w+)/edit$', PaymentRequestUpdate.as_view(), name='paymentrequest_edit'),
     url(r'^paymentrequests/(?P<pk>\w+)/delete$', PaymentRequestDelete.as_view(), name='paymentrequest_delete'),
     url(r'^paymentconfirmations$', PaymentConfirmationList.as_view(), name='paymentconfirmation_list'),
     url(r'^paymentconfirmations/(?P<pk>\w+)$', PaymentConfirmationDetail.as_view(), name='paymentconfirmation_detail'),

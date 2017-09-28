@@ -25,7 +25,7 @@ from django.core.urlresolvers import reverse
 from django.utils.decorators import method_decorator
 from django.views.decorators.csrf import csrf_exempt
 from django.http import HttpResponse, HttpResponseRedirect
-from django.utils.translation import ugettext_lazy as _
+from django.utils.translation import ugettext_lazy as _, ugettext as __
 from django.conf import settings
 
 from codenerix.views import GenList, GenDetail, GenCreate, GenUpdate, GenDelete, GenForeignKey
@@ -39,7 +39,12 @@ class PaymentRequestList(GenList):
     linkadd = getattr(settings, 'CDNX_PAYMENTS_REQUEST_CREATE', False)
     show_details = True
     default_ordering = ["-request_date"]
-    static_partial_row = "codenerix_payments/partials/paymentslist_rows.html"
+    gentranslate = {'pay': __("Pay")}
+
+    def dispatch(self, *args, **kwargs):
+        if getattr(settings, 'CDNX_PAYMENTS_REQUEST_PAY', False):
+            self.static_partial_row = "codenerix_payments/partials/paymentslist_rows.html"
+        return super(PaymentRequestList, self).dispatch(*args, **kwargs)
 
 
 class PaymentRequestCreate(GenCreate):
@@ -52,7 +57,7 @@ class PaymentRequestCreate(GenCreate):
         platform = form.cleaned_data["platform"]
 
         # Get payment profile from configuration
-        payment_profile = settings.PAYMENTS[platform]
+        profile = settings.PAYMENTS[platform]
 
         # Get the currency
         currency = Currency.objects.filter(iso4217='EUR').first()
@@ -68,6 +73,7 @@ class PaymentRequestCreate(GenCreate):
         form.instance.alternative = True
         form.instance.order = 0
         form.instance.currency = currency
+        form.instance.protocol = profile['protocol']
 
         # Let Django finish the job
         return super(PaymentRequestCreate, self).form_valid(form)
@@ -81,7 +87,8 @@ class PaymentRequestUpdate(GenUpdate):
 class PaymentRequestDetail(GenDetail):
     model = PaymentRequest
     groups = [
-        (_('Information'), 6,
+        (
+            _('Information'), 6,
             ['locator', 6],
             ['ref', 6],
             ['order', 6],
@@ -89,7 +96,8 @@ class PaymentRequestDetail(GenDetail):
             ['platform', 6],
             ['protocol', 6]
         ),
-        (_('Process'), 6,
+        (
+            _('Process'), 6,
             ['real', 6],
             ['cancelled', 6],
             ['total', 6],
@@ -97,15 +105,18 @@ class PaymentRequestDetail(GenDetail):
             ['error', 6],
             ['error_txt', 6],
         ),
-        (_('Request'), 6,
+        (
+            _('Request'), 6,
             ['request_date', 12],
             ['request', 12]
         ),
-        (_('Answer'), 6,
+        (
+            _('Answer'), 6,
             ['answer_date', 12],
             ['answer', 12]
         ),
-        (_('Notes'), 12,
+        (
+            _('Notes'), 12,
             ['notes', 6]
         ),
     ]
@@ -135,7 +146,7 @@ class PaymentPlatforms(GenForeignKey):
 
         for platform in settings.PAYMENTS.keys():
             name = settings.PAYMENTS[platform].get('name', platform)
-            if platform != 'meta' and ( not search or search=='*' or search in platform or search in name.lower()):
+            if platform != 'meta' and (not search or search == '*' or search in platform or search in name.lower()):
                 answer.append({'id': platform, 'label': name})
 
         # Convert the answer to JSON
@@ -159,15 +170,18 @@ class PaymentConfirmationList(GenList):
 class PaymentConfirmationDetail(GenDetail):
     model = PaymentConfirmation
     groups = [
-        (_('Information'), 6,
+        (
+            _('Information'), 6,
             ['payment', 6],
             ['ref', 6]
         ),
-        (_('Process'), 6,
+        (
+            _('Process'), 6,
             ['error', 6],
-            ['error_txt',6]
+            ['error_txt', 6]
         ),
-        (_('Result'), 12,
+        (
+            _('Result'), 12,
             ['action', 12],
             ['data', 12]
         ),
@@ -186,19 +200,23 @@ class PaymentAnswerList(GenList):
 class PaymentAnswerDetail(GenDetail):
     model = PaymentAnswer
     groups = [
-        (_('Information'), 6,
+        (
+            _('Information'), 6,
             ['payment', 6],
             ['ref', 6],
         ),
-        (_('Process'), 6,
+        (
+            _('Process'), 6,
             ['error', 6],
             ['error_txt', 6],
         ),
-        (_('Request'), 6,
+        (
+            _('Request'), 6,
             ['request_date', 12],
             ['request', 12]
         ),
-        (_('Answer'), 6,
+        (
+            _('Answer'), 6,
             ['answer', 12],
             ['answer_date', 12]
         ),

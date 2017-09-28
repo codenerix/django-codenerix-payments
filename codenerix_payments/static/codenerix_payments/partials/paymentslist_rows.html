@@ -9,10 +9,7 @@
 <td><span codenerix-html-compile='row.cancelled|codenerix'></td>
 <td><span codenerix-html-compile='row.error|codenerix'></td>
 <td>{{row.ref|codenerix}}</td>
-<td>
-    <form ng-if='row.get_approval.form' target='{{row.get_approval.url}}'>
-        <input ng-repeat='(key, value) in row.get_approval.form' type='text' name='{{key}}' value='{{value}}'>
-        <input type='submit' value='data.meta.gentranslate.pay'>
-    </form>
-    <button ng-if='!row.get_approval.form' href='{{row.get_approval.url}}'>{{data.meta.gentranslate.pay}}</button>
+<td ng-click="$event.stopPropagation();" ng-controller="codenerixPaymentRequestCtrl">
+    <button ng-click="submit_approval(row.pk, row.get_approval)">{{data.meta.gentranslate.pay}}</button>
+    <div style='display:none' id='PaymentInternalFormHTML{{row.pk}}'></div>
 </td>
