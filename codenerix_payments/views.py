@@ -41,9 +41,10 @@ class PaymentRequestList(GenList):
     linkadd = getattr(settings, 'CDNX_PAYMENTS_REQUEST_CREATE', False)
     show_details = True
     default_ordering = ["-request_date"]
-    gentranslate = {'pay': __("Pay"), 'yes': __("Yes"), 'no': __("No")}
+    gentranslate = {'pay': __("Pay"), 'yes': __("Yes"), 'no': __("No"), 'cancel': __("Cancel")}
 
     def dispatch(self, *args, **kwargs):
+        self.client_context = {'cancelurl': reverse('payment_url', kwargs={'action': 'cancel', 'locator': 'LOCATOR'})}
         if getattr(settings, 'CDNX_PAYMENTS_REQUEST_PAY', False):
             self.static_partial_row = "codenerix_payments/partials/paymentslist_rows.html"
         return super(PaymentRequestList, self).dispatch(*args, **kwargs)
@@ -249,24 +250,25 @@ class PaymentAction(View):
     @method_decorator(csrf_exempt)
     def dispatch(self, request, *args, **kwargs):
         import datetime
-        with open("/tmp/codenerix_info.txt", "a") as F:
+        # with open("/tmp/codenerix_info.txt", "a") as F:
+        if True:
             now = datetime.datetime.now()
-            F.write("\n\n{} - Start\n".format(now))
+            # F.write("\n\n{} - Start\n".format(now))
 
             # Get incoming details
             locator = kwargs.get('locator', None)
             action = kwargs.get('action', None)
-            F.write("{} - Start CID;{} ACTION:{}\n".format(now, locator, action))
+            # F.write("{} - Start CID;{} ACTION:{}\n".format(now, locator, action))
 
             # Find the payment request
             try:
                 pr = PaymentRequest.objects.get(locator=locator)
             except PaymentRequest.DoesNotExist:
                 pr = None
-            if pr:
-                F.write("{} - PR {} - REVERSE:{}\n".format(now, pr, pr.reverse))
-            else:
-                F.write("{} - PR NOT FOUND!\n")
+            #if pr:
+            #    F.write("{} - PR {} - REVERSE:{}\n".format(now, pr, pr.reverse))
+            #else:
+            #    F.write("{} - PR NOT FOUND!\n")
 
             # Prepare answer
             answer = {'action': action, 'locator': locator, 'error': 0}
@@ -303,21 +305,21 @@ class PaymentAction(View):
 
                     if action == 'success':
 
-                        F.write("{} - SUCCESS\n".format(now))
+                        # F.write("{} - SUCCESS\n".format(now))
                         # This answer must be in JSON format
                         answer_json = True
 
                         pa = PaymentAnswer()
                         try:
                             answer = pa.success(pr, request.POST)
-                            F.write("{} - PA Success\n".format(now))
-                            F.flush()
+                            # F.write("{} - PA Success\n".format(now))
+                            # F.flush()
                             pa.payment.notify(request)
-                            F.write("{} - NOTIFY Success\n".format(now))
-                            F.flush()
+                            # F.write("{} - NOTIFY Success\n".format(now))
+                            # F.flush()
                         except PaymentError as e:
-                            F.write("{} - NOTIFY Error - {}\n".format(now, e))
-                            F.flush()
+                            # F.write("{} - NOTIFY Error - {}\n".format(now, e))
+                            # F.flush()
                             answer['error'] = 'PS{:02d}'.format(e.args[0])
 
                     elif action == 'confirm':

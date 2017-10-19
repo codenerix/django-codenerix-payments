@@ -692,10 +692,11 @@ class PaymentRequest(CodenerixModel):
         self.save()
 
     def notify(self, request):
-        with open("/tmp/codenerix_transaction.txt", "a") as F:
+        # with open("/tmp/codenerix_transaction.txt", "a") as F:
+        if True:
             import datetime
             now = datetime.datetime.now()
-            F.write("\n\n{} -     > NOTIFY FUNCTION\n".format(now))
+            # F.write("\n\n{} -     > NOTIFY FUNCTION\n".format(now))
             if self.reverse == 'autorender':
                 func = resolve(reverse('CNDX_payments_confirmation', kwargs={'locator': 0, 'action': 'success', 'error': 0})).func
             else:
@@ -707,38 +708,38 @@ class PaymentRequest(CodenerixModel):
             mod = importlib.import_module(module)
             cl = getattr(mod, name)
 
-            F.write("{} -     > DETAILS:\n".format(now))
-            F.write("{} -          module:{}\n".format(now, module))
-            F.write("{} -            name:{}\n".format(now, name))
-            F.write("{} -            func:{}\n".format(now, func))
-            F.write("{} -              cl:{}\n".format(now, cl))
-            F.flush()
+            # F.write("{} -     > DETAILS:\n".format(now))
+            # F.write("{} -          module:{}\n".format(now, module))
+            # F.write("{} -            name:{}\n".format(now, name))
+            # F.write("{} -            func:{}\n".format(now, func))
+            # F.write("{} -              cl:{}\n".format(now, cl))
+            # F.flush()
 
             # Decide what to do
             try:
-                F.write("{} -     > NOTIFY DECISION\n".format(now))
-                F.flush()
+                # F.write("{} -     > NOTIFY DECISION\n".format(now))
+                # F.flush()
                 if getattr(cl, "payment_paid", None):
-                    F.write("{} -     > NOTIFY PAID -> CLASS payment_paid({},{},{},{})\n".format(now, 'request', self.pk, self.locator, 0))
-                    F.flush()
+                    # F.write("{} -     > NOTIFY PAID -> CLASS payment_paid({},{},{},{})\n".format(now, 'request', self.pk, self.locator, 0))
+                    # F.flush()
                     cl.payment_paid(request, self.locator)
                 else:
-                    F.write("{} -     > NOTIFY PAID -> FUNCTION func({},{},{},{},{})\n".format(now, 'request', 'paid', self.pk, self.locator, 0))
-                    F.flush()
+                    # F.write("{} -     > NOTIFY PAID -> FUNCTION func({},{},{},{},{})\n".format(now, 'request', 'paid', self.pk, self.locator, 0))
+                    # F.flush()
                     func(request, 'paid', self.locator, 0)
             except Exception as e:
-                try:
-                    F.write("{} -     > EXCEPTION -> {}\n".format(now, e))
-                except Exception:
-                    F.write("{} -     > EXCEPTION -> ???\n".format(now))
+                # try:
+                #     F.write("{} -     > EXCEPTION -> {}\n".format(now, e))
+                # except Exception:
+                #     F.write("{} -     > EXCEPTION -> ???\n".format(now))
                 try:
                     if getattr(cl, "payment_exception", None):
-                        F.write("{} -     > NOTIFY EXCEPTION -> CLASS payment_exception({},{},{},{})\n".format(now, 'request', self.pk, self.locator, e))
-                        F.flush()
+                        # F.write("{} -     > NOTIFY EXCEPTION -> CLASS payment_exception({},{},{},{})\n".format(now, 'request', self.pk, self.locator, e))
+                        # F.flush()
                         cl.payment_exception(request, self.locator, e)
                     else:
-                        F.write("{} -     > NOTIFY EXCEPTION -> FUNCTION func({},{},{},{},{})\n".format(now, 'request', 'exception', self.pk, self.locator, e))
-                        F.flush()
+                        # F.write("{} -     > NOTIFY EXCEPTION -> FUNCTION func({},{},{},{},{})\n".format(now, 'request', 'exception', self.pk, self.locator, e))
+                        # F.flush()
                         func(request, 'exception', self.locator, e)
                 except Exception:
                     pass
