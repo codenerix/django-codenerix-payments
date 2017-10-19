@@ -41,7 +41,7 @@ class PaymentRequestList(GenList):
     linkadd = getattr(settings, 'CDNX_PAYMENTS_REQUEST_CREATE', False)
     show_details = True
     default_ordering = ["-request_date"]
-    gentranslate = {'pay': __("Pay")}
+    gentranslate = {'pay': __("Pay"), 'yes': __("Yes"), 'no': __("No")}
 
     def dispatch(self, *args, **kwargs):
         if getattr(settings, 'CDNX_PAYMENTS_REQUEST_PAY', False):

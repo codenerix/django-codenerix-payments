@@ -341,10 +341,13 @@ class PaymentRequest(CodenerixModel):
         fields.append(('currency', _('Currency'), 100))
         fields.append(('cancelled', _('Cancelled'), 100))
         fields.append(('error', _('Error'), 100))
-        fields.append(('ref', _('Reference'), 100))
+        fields.append(('is_paid', _('Is paid?'), 100))
         if getattr(settings, 'CDNX_PAYMENTS_REQUEST_PAY', False):
             fields.append(('get_approval', _('Pay'), 100))
         return fields
+
+    def is_paid(self):
+        return bool(self.paymentanswers.filter(ref__isnull=False).first())
 
     def get_approval(self):
         # If the transaction wasn't cancelled
@@ -683,7 +686,10 @@ class PaymentRequest(CodenerixModel):
             import datetime
             now = datetime.datetime.now()
             F.write("\n\n{} -     > NOTIFY FUNCTION\n".format(now))
-            func = resolve(reverse(self.reverse, kwargs={'locator': 0, 'action': 'success', 'error': 0})).func
+            if self.reverse == 'autorender':
+                func = resolve(reverse('CNDX_payments_confirmation', kwargs={'locator': 0, 'action': 'success', 'error': 0})).func
+            else:
+                func = resolve(reverse(self.reverse, kwargs={'locator': 0, 'action': 'success', 'error': 0})).func
 
             # Detect if it is class based view
             module = func.__module__

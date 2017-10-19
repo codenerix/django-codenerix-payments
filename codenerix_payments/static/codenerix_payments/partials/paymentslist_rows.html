@@ -6,10 +6,20 @@
 <td>{{row.protocol|codenerix}}</td>
 <td>{{row.total|codenerix}}</td>
 <td>{{row.currency|codenerix}}</td>
-<td><span codenerix-html-compile='row.cancelled|codenerix'></td>
-<td><span codenerix-html-compile='row.error|codenerix'></td>
-<td>{{row.ref|codenerix}}</td>
+<td>
+    <b>
+        <span ng-if='row.cancelled=="True"' class='text-danger'>{{data.meta.gentranslate.yes}}</span>
+        <span ng-if='row.cancelled=="False"' class='text-success'>{{data.meta.gentranslate.no}}</span>
+    </b>
+</td>
+<td>
+    <b>
+        <span ng-if='row.error=="True"' class='text-danger'>{{data.meta.gentranslate.yes}}</span>
+        <span ng-if='row.error=="False"' class='text-success'>{{data.meta.gentranslate.no}}</span>
+    </b>
+</td>
+<td><span codenerix-html-compile='row.is_paid|codenerix'></td>
 <td ng-click="$event.stopPropagation();" ng-controller="codenerixPaymentRequestCtrl">
-    <button ng-click="submit_approval(row.pk, row.get_approval)">{{data.meta.gentranslate.pay}}</button>
+    <button ng-click="submit_approval(row.pk, row.get_approval)" ng-disabled='row.is_paid'>{{data.meta.gentranslate.pay}}</button>
     <div style='display:none' id='PaymentInternalFormHTML{{row.pk}}'></div>
 </td>
