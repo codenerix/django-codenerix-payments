@@ -66,7 +66,7 @@ class PaymentRequestCreate(GenCreate):
         if not currency:
             currency = Currency()
             currency.name = "Euro"
-            currency.symbol = "€".encode("utf-8")
+            currency.symbol = u"€".encode("utf-8")
             currency.iso4217 = 'EUR'
             currency.price = 1.0
             currency.save()
