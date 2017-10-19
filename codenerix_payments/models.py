@@ -343,11 +343,18 @@ class PaymentRequest(CodenerixModel):
         fields.append(('error', _('Error'), 100))
         fields.append(('is_paid', _('Is paid?'), 100))
         if getattr(settings, 'CDNX_PAYMENTS_REQUEST_PAY', False):
-            fields.append(('get_approval', _('Pay'), 100))
+            fields.append(('get_approval_list', _('Pay'), 100))
         return fields
 
     def is_paid(self):
         return bool(self.paymentanswers.filter(ref__isnull=False).first())
+
+    def get_approval_list(self):
+        try:
+            apr = self.get_approval()
+        except PaymentError:
+            apr = {'noplatform': str(_("Unknown platform"))}
+        return apr
 
     def get_approval(self):
         # If the transaction wasn't cancelled
@@ -355,12 +362,15 @@ class PaymentRequest(CodenerixModel):
             # Get approval link
             config = settings.PAYMENTS.get(self.platform, {})
             meta = settings.PAYMENTS.get('meta', {})
-            if self.protocol == 'paypal':
-                approval = self.__get_approval_paypal(meta, config)
-            elif self.protocol == 'redsys' or self.protocol == 'redsysxml':
-                approval = self.__get_approval_redsys(meta, config)
+            if config and meta:
+                if self.protocol == 'paypal':
+                    approval = self.__get_approval_paypal(meta, config)
+                elif self.protocol == 'redsys' or self.protocol == 'redsysxml':
+                    approval = self.__get_approval_redsys(meta, config)
+                else:
+                    raise PaymentError(1, "Unknown protocol '{}'".format(self.protocol))
             else:
-                raise PaymentError(1, "Unknown protocol '{}'".format(self.protocol))
+                raise PaymentError(2, "Unknown platform '{}'".format(self.platform))
         else:
             # No approval information available
             approval = {}
