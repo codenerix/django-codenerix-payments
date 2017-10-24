@@ -928,121 +928,121 @@ class PaymentConfirmation(CodenerixModel):
 
     def __action_redsys(self, config, pr, data, error):
 
-        if self.payment.real:
-            # On a system on production we don't get confirmation data from Redsys
-            if self.action == 'confirm':
-                # Check if there is at least one remote confirmation for this payment
-                if not self.payment.paymentanswers.filter(error=False).count():
-                    error = (4, "Payment is not ready for executing, the system didn't get yet the confirmation from REDSYS")
-                elif self.payment.paymentconfirmations.filter(ref__isnull=False).count():
-                    error = (10, "Payment is already confirmed")
-                else:
-                    # Get PaymentAnswer
-                    pa = self.payment.paymentanswers.filter(error=False)[0]
-                    # Everything is fine, payer verified and payment authorized
-                    self.ref = pa.ref
-                    self.save()
-            elif self.action == 'cancel':
-                # Cancel payment
-                pr.cancelled = True
-                pr.save()
-                # Remember payment confirmation for future reference
+        if self.action == 'confirm':
+            # Check if there is at least one remote confirmation for this payment
+            if not self.payment.paymentanswers.filter(error=False).count():
+                error = (4, "Payment is not ready for executing, the system didn't get yet the confirmation from REDSYS")
+            elif self.payment.paymentconfirmations.filter(ref__isnull=False).count():
+                error = (10, "Payment is already confirmed")
+            else:
+                # Get PaymentAnswer
+                pa = self.payment.paymentanswers.filter(error=False)[0]
+                # Everything is fine, payer verified and payment authorized
+                self.ref = pa.ref
                 self.save()
-            else:
-                # Wrong action (this service is valid only for confirm and cancel)
-                error = (6, "Wrong action: {}".format(self.action))
+        elif self.action == 'cancel':
+            # Cancel payment
+            pr.cancelled = True
+            pr.save()
+            # Remember payment confirmation for future reference
+            self.save()
         else:
+            # Wrong action (this service is valid only for confirm and cancel)
+            error = (6, "Wrong action: {}".format(self.action))
 
-            # Get authkey
-            authkey = base64.b64decode(config.get('auth_key', ''))
-
-            # Set arguments
-            signature = None
-            signature_version = None
-            params = None
-            paramsb64 = None
-
-            # Get arguments from data if we are confirming a payment
-            if self.action == 'confirm':
-                for key in data:
-                    value = data[key]
-                    if key == 'Ds_SignatureVersion':
-                        signature_version = value
-                    elif key == 'Ds_MerchantParameters':
-                        paramsb64 = value
-                        try:
-                            params = json.loads(base64.b64decode(paramsb64).decode())
-                        except Exception:
-                            params = None
-                    elif key == 'Ds_Signature':
-                        signature = value.replace("/", "_").replace("+", "-")
-
-            # Check we have all information we need
-            if signature and signature_version and paramsb64 and params:
-
-                # Check version
-                if signature_version == 'HMAC_SHA256_V1':
-
-                    # Build internal signature
-                    signature_internal = redsys_signature(authkey, params.get('Ds_Order', ''), paramsb64, recode=True)
-
-                    # Verify signature
-                    if signature == signature_internal:
-
-                        # In this point we have a confirmation request from the user with data in it, example:
-                        # {"Ds_Date":"18%2F08%2F2016","Ds_Hour":"11%3A20","Ds_SecurePayment":"1","Ds_Amount":"1200","Ds_Currency":"978","Ds_Order":"00000070","Ds_MerchantCode":"999008881","Ds_Terminal":"001","Ds_Response":"0000","Ds_TransactionType":"0","Ds_MerchantData":"","Ds_AuthorisationCode":"841950","Ds_Card_Number":"454881******0004","Ds_ConsumerLanguage":"1","Ds_Card_Country":"724"}
-
-                        # Get info
-                        amount = params.get('Ds_Amount', None)
-                        authorisation = params.get('Ds_AuthorisationCode', None)
-
-                        # Check if payment is ready for fonfirmation
-                        if amount and authorisation:
-
-                            if float(amount) / 100 == self.payment.total:
-
-                                # Check if there is at least one remote confirmation for this payment
-                                if not self.payment.paymentanswers.filter(error=False).count():
-                                    error = (4, "Payment is not ready for executing, the system didn't get yet the confirmation from REDSYS")
-                                elif self.payment.paymentconfirmations.filter(ref__isnull=False).count():
-                                    error = (10, "Payment is already confirmed")
-                                else:
-                                    # Everything is fine, payer verified and payment authorized
-                                    self.ref = authorisation
-                                    self.save()
-                            else:
-                                error = (3, "Amount doesn't match to the payment request: our={} - remote={}".format(self.payment.total, float(amount) / 100))
-                        else:
-                            if not amount:
-                                error = (3, "Missing amount in your confirmation request")
-                            elif not authorisation:
-                                error = (3, "Missing authorisation code in your confirmation request")
-                            else:
-                                error = (3, "Missing info in your confirmation request")
-                    else:
-                        error = (9, "Invalid signature: our={} - remote={}".format(signature_internal, signature))
-                else:
-                    error = (9, "Invalid signature version")
-
-            else:
-
-                if self.action == 'cancel':
-                    # Cancel payment
-                    pr.cancelled = True
-                    pr.save()
-                    # Remember payment confirmation for future reference
-                    self.save()
-                else:
-                    missing = []
-                    if not params:
-                        missing.append("Ds_MerchantParameters has wrong encoding")  # No Base64
-                    if not paramsb64:
-                        missing.append("Missing Ds_MerchantParameters")
-                    if not signature:
-                        missing.append("Missing Ds_Signature")
-                    if not signature_version:
-                        missing.append("Missing Ds_SignatureVersion")
-                    error = (6, "Missing information in data: {}".format(", ".join(missing)))
+        # We won't get confirmation data from Redsys, not anymore!
+        # else:
+        #
+        #    # Get authkey
+        #    authkey = base64.b64decode(config.get('auth_key', ''))
+        #
+        #    # Set arguments
+        #    signature = None
+        #    signature_version = None
+        #    params = None
+        #    paramsb64 = None
+        #
+        #    # Get arguments from data if we are confirming a payment
+        #    if self.action == 'confirm':
+        #        for key in data:
+        #            value = data[key]
+        #            if key == 'Ds_SignatureVersion':
+        #                signature_version = value
+        #            elif key == 'Ds_MerchantParameters':
+        #                paramsb64 = value
+        #                try:
+        #                    params = json.loads(base64.b64decode(paramsb64).decode())
+        #                except Exception:
+        #                    params = None
+        #            elif key == 'Ds_Signature':
+        #                signature = value.replace("/", "_").replace("+", "-")
+        #
+        #    # Check we have all information we need
+        #    if signature and signature_version and paramsb64 and params:
+        #
+        #        # Check version
+        #        if signature_version == 'HMAC_SHA256_V1':
+        #
+        #            # Build internal signature
+        #            signature_internal = redsys_signature(authkey, params.get('Ds_Order', ''), paramsb64, recode=True)
+        #
+        #            # Verify signature
+        #            if signature == signature_internal:
+        #
+        #                # In this point we have a confirmation request from the user with data in it, example:
+        #                # {"Ds_Date":"18%2F08%2F2016","Ds_Hour":"11%3A20","Ds_SecurePayment":"1","Ds_Amount":"1200","Ds_Currency":"978","Ds_Order":"00000070","Ds_MerchantCode":"999008881","Ds_Terminal":"001","Ds_Response":"0000","Ds_TransactionType":"0","Ds_MerchantData":"","Ds_AuthorisationCode":"841950","Ds_Card_Number":"454881******0004","Ds_ConsumerLanguage":"1","Ds_Card_Country":"724"}
+        #
+        #                # Get info
+        #                amount = params.get('Ds_Amount', None)
+        #                authorisation = params.get('Ds_AuthorisationCode', None)
+        #
+        #                # Check if payment is ready for fonfirmation
+        #                if amount and authorisation:
+        #
+        #                    if float(amount) / 100 == self.payment.total:
+        #
+        #                        # Check if there is at least one remote confirmation for this payment
+        #                        if not self.payment.paymentanswers.filter(error=False).count():
+        #                            error = (4, "Payment is not ready for executing, the system didn't get yet the confirmation from REDSYS")
+        #                        elif self.payment.paymentconfirmations.filter(ref__isnull=False).count():
+        #                            error = (10, "Payment is already confirmed")
+        #                        else:
+        #                            # Everything is fine, payer verified and payment authorized
+        #                            self.ref = authorisation
+        #                            self.save()
+        #                    else:
+        #                        error = (3, "Amount doesn't match to the payment request: our={} - remote={}".format(self.payment.total, float(amount) / 100))
+        #                else:
+        #                    if not amount:
+        #                        error = (3, "Missing amount in your confirmation request")
+        #                    elif not authorisation:
+        #                        error = (3, "Missing authorisation code in your confirmation request")
+        #                    else:
+        #                        error = (3, "Missing info in your confirmation request")
+        #            else:
+        #                error = (9, "Invalid signature: our={} - remote={}".format(signature_internal, signature))
+        #        else:
+        #            error = (9, "Invalid signature version")
+        #
+        #    else:
+        #
+        #        if self.action == 'cancel':
+        #            # Cancel payment
+        #            pr.cancelled = True
+        #            pr.save()
+        #            # Remember payment confirmation for future reference
+        #            self.save()
+        #        else:
+        #            missing = []
+        #            if not params:
+        #                missing.append("Ds_MerchantParameters has wrong encoding")  # No Base64
+        #            if not paramsb64:
+        #                missing.append("Missing Ds_MerchantParameters")
+        #            if not signature:
+        #                missing.append("Missing Ds_Signature")
+        #            if not signature_version:
+        #                missing.append("Missing Ds_SignatureVersion")
+        #            error = (6, "Missing information in data: {}".format(", ".join(missing)))
 
         # Return error
         return error
