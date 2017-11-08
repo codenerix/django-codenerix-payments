@@ -453,7 +453,7 @@ class PaymentRequest(CodenerixModel):
 
         # DETAILS 1
         ce = CodenerixEncoder()
-        params['DS_MERCHANT_ORDER'] = '{}'.format(ce.numeric_encode(self.order, dic='hex36', length=8, cfill='A'))  # ORDER NUMBER: Min 4 Alfa Numeric - Max 12 Alfa Numeric
+        params['DS_MERCHANT_ORDER'] = '{}'.format(ce.numeric_encode(self.pk, dic='hex36', length=8, cfill='A'))  # ORDER NUMBER: Min 4 Alfa Numeric - Max 12 Alfa Numeric
         # #fields['Ds_Merchant_Titular'] = 'TIT'                   # TITULAR: Max 60 Alfa Numeric
         # #fields['Ds_Merchant_ProductDescription'] = 'DES'        # PRODUCT DESCRIPTION: Max 125 Alfa Numeric
         params['DS_MERCHANT_MERCHANTCODE'] = code               # SELF CODE: 9 Numeric
