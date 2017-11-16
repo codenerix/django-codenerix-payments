@@ -1,0 +1,14 @@
+<td>{{row.payment__locator|codenerix}}</td>
+<td>{{row.payment__order|codenerix}}</td>
+<td>{{row.request_date|codenerix}}</td>
+<td>{{row.answer_date|codenerix}}</td>
+<td>{{row.payment__total|codenerix}}</td>
+<td>{{row.payment__currency|codenerix}}</td>
+<td>
+    <b>
+        <span ng-if='row.error=="True"' class='text-danger'>{{data.meta.gentranslate.yes}}</span>
+        <span ng-if='row.error=="False"' class='text-success'>{{data.meta.gentranslate.no}}</span>
+    </b>
+</td>
+<td>{{row.payment__ref|codenerix}}</td>
+<td>{{row.ref|codenerix}}</td>

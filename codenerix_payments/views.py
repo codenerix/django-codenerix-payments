@@ -169,6 +169,8 @@ class PaymentConfirmationList(GenList):
     linkadd = False
     show_details = True
     default_ordering = ["-created"]
+    static_partial_row = "codenerix_payments/partials/paymentsconfirmlist_rows.html"
+    gentranslate = {'yes': __("Yes"), 'no': __("No")}
 
 
 class PaymentConfirmationDetail(GenDetail):
@@ -199,6 +201,8 @@ class PaymentAnswerList(GenList):
     linkadd = False
     show_details = True
     default_ordering = ["-request_date"]
+    static_partial_row = "codenerix_payments/partials/paymentsanswerlist_rows.html"
+    gentranslate = {'yes': __("Yes"), 'no': __("No")}
 
 
 class PaymentAnswerDetail(GenDetail):
@@ -249,10 +253,10 @@ class PaymentAction(View):
 
     @method_decorator(csrf_exempt)
     def dispatch(self, request, *args, **kwargs):
-        import datetime
+        # import datetime
         # with open("/tmp/codenerix_info.txt", "a") as F:
         if True:
-            now = datetime.datetime.now()
+            # now = datetime.datetime.now()
             # F.write("\n\n{} - Start\n".format(now))
 
             # Get incoming details
@@ -265,9 +269,9 @@ class PaymentAction(View):
                 pr = PaymentRequest.objects.get(locator=locator)
             except PaymentRequest.DoesNotExist:
                 pr = None
-            #if pr:
+            # if pr:
             #    F.write("{} - PR {} - REVERSE:{}\n".format(now, pr, pr.reverse))
-            #else:
+            # else:
             #    F.write("{} - PR NOT FOUND!\n")
 
             # Prepare answer
