@@ -18,7 +18,7 @@ angular.module('codenerixPaymentRequestControllers', [])
                 $('#PaymentInternalForm'+pk).submit();
             } else {
                 // console.log("Paypal");
-                window.open(apr.url+'?autorender=1');
+                window.open(apr.url);
             }
         };
         $scope.submit_cancel = function(locator, cancelurl) {
