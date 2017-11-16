@@ -18,13 +18,13 @@ angular.module('codenerixPaymentRequestControllers', [])
                 $('#PaymentInternalForm'+pk).submit();
             } else {
                 // console.log("Paypal");
-                window.open(apr.url);
+                window.open(apr.url+'?autorender=1');
             }
         };
         $scope.submit_cancel = function(locator, cancelurl) {
             var url = cancelurl.replace("LOCATOR",locator);
             // console.log("Cancel payment "+locator+" jumping to "+url);
-            window.open(url, '_blank');
+            window.open(url+'?autorender=1', '_blank');
             var refresh = function () {
                 $scope.$parent.$parent.$parent.$parent.$parent.refresh();
             };

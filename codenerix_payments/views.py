@@ -355,7 +355,7 @@ class PaymentAction(View):
             if answer_json:
                 return HttpResponse(json.dumps(answer), content_type='application/json')
             else:
-                if pr.reverse == 'autorender':
+                if pr.reverse == 'autorender' or bool(self.request.GET.get('autorender', self.request.POST.get('autorender', False))):
                     return HttpResponseRedirect(reverse('CNDX_payments_confirmation', kwargs=answer))
                 else:
                     return HttpResponseRedirect(reverse(pr.reverse, kwargs=answer))
