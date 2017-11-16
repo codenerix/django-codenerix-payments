@@ -1,3 +1,4 @@
+<td align='center'><span codenerix-html-compile='row.is_paid|codenerix'></td>
 <td>{{row.locator|codenerix}}</td>
 <td>{{row.order|codenerix}}</td>
 <td>{{row.request_date|codenerix}}</td>
@@ -18,7 +19,6 @@
         <span ng-if='row.error=="False"' class='text-success'>{{data.meta.gentranslate.no}}</span>
     </b>
 </td>
-<td><span codenerix-html-compile='row.is_paid|codenerix'></td>
 <td ng-click="$event.stopPropagation();" ng-controller="codenerixPaymentRequestCtrl">
 
     <span ng-if='row.is_paid || row.cancelled=="True"'>-</span>

@@ -331,6 +331,7 @@ class PaymentRequest(CodenerixModel):
 
     def __fields__(self, info):
         fields = []
+        fields.append(('is_paid', _('Is paid?'), 100))
         fields.append(('locator', _('Locator'), 100))
         fields.append(('order', _('Order'), 100))
         fields.append(('request_date', _('Request date'), 100))
@@ -341,7 +342,6 @@ class PaymentRequest(CodenerixModel):
         fields.append(('currency', _('Currency'), 100))
         fields.append(('cancelled', _('Cancelled'), 100))
         fields.append(('error', _('Error'), 100))
-        fields.append(('is_paid', _('Is paid?'), 100))
         if getattr(settings, 'CDNX_PAYMENTS_REQUEST_PAY', False):
             fields.append(('get_approval_list', _('Pay'), 100))
         return fields
