@@ -259,7 +259,7 @@ def redsys_error(code):
     elif code3 in errors:
         return errors[code3]
     else:
-        return 'UNKNOWN CODE {}'
+        return _('UNKNOWN CODE {code}').format(code=code)
 
 
 class Currency(CodenerixModel):
@@ -352,8 +352,8 @@ class PaymentRequest(CodenerixModel):
     def get_approval_list(self):
         try:
             apr = self.get_approval()
-        except PaymentError:
-            apr = {'noplatform': str(_("Unknown platform"))}
+        except PaymentError as e:
+            apr = {'error': e}
         return apr
 
     def get_approval(self):
@@ -368,9 +368,9 @@ class PaymentRequest(CodenerixModel):
                 elif self.protocol == 'redsys' or self.protocol == 'redsysxml':
                     approval = self.__get_approval_redsys(meta, config)
                 else:
-                    raise PaymentError(1, "Unknown protocol '{}'".format(self.protocol))
+                    raise PaymentError(1, _("Unknown protocol '{protocol}'").format(protocol=self.protocol))
             else:
-                raise PaymentError(2, "Unknown platform '{}'".format(self.platform))
+                raise PaymentError(2, _("Unknown platform '{platform}'").format(platform=self.platform))
         else:
             # No approval information available
             approval = {}
@@ -405,7 +405,7 @@ class PaymentRequest(CodenerixModel):
 
         # Sanity check for total amount to charge
         if float(amount) / 100 != self.total:
-            raise PaymentError(11, "Amount doesn't match to the payment request: stored={} - protocol={}".format(self.total, float(amount) / 100))
+            raise PaymentError(11, _("Amount doesn't match to the payment request: stored={stored} - protocol={protocol}").format(stored=self.total, protocol=float(amount) / 100))
 
         # CURRENCY: 4 Numeric
         curcode = self.currency.iso4217
@@ -422,7 +422,7 @@ class PaymentRequest(CodenerixModel):
         elif curcode == 'CAD':
             curcode = '124'
         else:
-            raise PaymentError(1, "Unknown currency for this protocol '{}' (available are: EUR, USD, GBP, JPY, CHF & CAD)".format(curcode))
+            raise PaymentError(1, _("Unknown currency for this protocol '{currency}' (available are: EUR, USD, GBP, JPY, CHF & CAD)").format(currency=curcode))
         params['DS_MERCHANT_CURRENCY'] = curcode
 
         # GET DETAILS
@@ -564,7 +564,7 @@ class PaymentRequest(CodenerixModel):
                 if key == protocol:
                     self.protocol = key
             if self.protocol is None:
-                raise PaymentError(8, "Unknown platform '{}'".format(self.platform))
+                raise PaymentError(8, _("Unknown platform '{platform}'").format(platorm=self.platform))
 
         # If no orther specified
         auto_set_order = not self.order
@@ -596,7 +596,7 @@ class PaymentRequest(CodenerixModel):
                         self.save()
                     else:
                         # Unknown protocol selected
-                        raise PaymentError(1, "Unknown protocol '{}'".format(self.protocol))
+                        raise PaymentError(1, _("Unknown protocol '{protocol}'").format(protocol=self.protocol))
                 else:
                     # Request and configuration do not match
                     if meta.get('real', False):
@@ -607,9 +607,9 @@ class PaymentRequest(CodenerixModel):
                         envself = 'REAL'
                     else:
                         envself = 'TEST'
-                    raise PaymentError(2, "Wrong environment: this transaction is for '{}' environment and system is set to '{}'".format(envself, envsys))
+                    raise PaymentError(2, _("Wrong environment: this transaction is for '{selfenviron}' environment and system is set to '{sysenviron}'").format(selfenviron=envself, sysenviron=envsys))
             else:
-                raise PaymentError(8, "Platform '{}' not configured in your system".format(self.platform))
+                raise PaymentError(8, _("Platform '{platform}' not configured in your system").format(platform=self.platform))
 
         # Return the model we have created
         return m
@@ -802,7 +802,7 @@ class PaymentConfirmation(CodenerixModel):
             if pr.protocol == 'paypal':
                 pa = pr.paymentanswers.filter(ref__isnull=False, error=False)
                 if pa.count():
-                    error = (7, "Payment already processed")
+                    error = (7, _("Payment already processed"))
                     self.error = True
                     self.error_txt = json.dumps({'error': error[0], 'errortxt': error[1]})
                     self.save()
@@ -821,7 +821,7 @@ class PaymentConfirmation(CodenerixModel):
                 elif pr.protocol == 'redsys' or pr.protocol == 'redsysxml':
                     error = self.__action_redsys(config, pr, data, error)
                 else:
-                    error = (1, "Unknown protocol '{}'".format(self.protocol))
+                    error = (1, _("Unknown protocol '{protocol}'").format(protocol=self.protocol))
             else:
                 if meta.get('real', False):
                     envsys = 'REAL'
@@ -831,9 +831,9 @@ class PaymentConfirmation(CodenerixModel):
                     envself = 'REAL'
                 else:
                     envself = 'TEST'
-                error = (2, "Wrong environment: this transaction is for '{}' environment and system is set to '{}'".format(envself, envsys))
+                error = (2, _("Wrong environment: this transaction is for '{selfenviron}' environment and system is set to '{sysenviron}'").format(selfenviron=envself, sysenviron=envsys))
         else:
-            error = (4, "Payment has been cancelled/declined, access denied!")
+            error = (4, _("Payment has been cancelled/declined, access denied!"))
 
         # If there was some error, save and launch it!
         if error:
@@ -883,13 +883,13 @@ class PaymentConfirmation(CodenerixModel):
                     payerinf = payment.to_dict()['payer']
                     # Verify all
                     if float(info['total']) != float(pr.total):
-                        error = (3, "Total does not match: our={} paypal={}".format(float(pr.total), float(info['total'])))
+                        error = (3, _("Total does not match: our={our} paypal={paypal}").format(our=float(pr.total), paypal=float(info['total'])))
                     elif info['currency'].upper() != pr.currency.iso4217.upper():
-                        error = (3, "Currency does not math: our={} paypal={}".format(pr.currency.iso4217.upper(), info['currency'].upper()))
+                        error = (3, _("Currency does not math: our={our} paypal={paypal}").format(our=pr.currency.iso4217.upper(), paypal=info['currency'].upper()))
                     elif payerinf['status'] != 'VERIFIED':
-                        error = (3, "Payer hasn't been VERIFIED yet, it is {}".format(payerinf['status']))
+                        error = (3, _("Payer hasn't been VERIFIED yet, it is {payer}").format(payer=payerinf['status']))
                     elif payerinf['payer_info']['payer_id'] != payer_id:
-                        error = (3, "Wrong Payer ID: our={} paypal={}".format(payer_id, payerinf['payer_info']['payer_id']))
+                        error = (3, _("Wrong Payer ID: our={our} paypal={paypal}").format(our=payer_id, paypal=payerinf['payer_info']['payer_id']))
                     else:
                         # Everything is fine, payer verified and payment authorized
                         self.ref = payer_id
@@ -902,10 +902,10 @@ class PaymentConfirmation(CodenerixModel):
                         pa.payment = pr
                         pa.save(feedback=payment)
                 else:
-                    error = (4, "Payment is not ready for confirmation, status is '{}' and it should be 'created'".format(state))
+                    error = (4, _("Payment is not ready for confirmation, status is '{status}' and it should be 'created'").format(status=state))
 
             else:
-                error = (5, "Payment not found!")
+                error = (5, _("Payment not found!"))
 
         else:
 
@@ -918,10 +918,10 @@ class PaymentConfirmation(CodenerixModel):
             else:
                 missing = []
                 if not payment_id:
-                    missing.append("Missing paymentId")
+                    missing.append(_("Missing paymentId"))
                 if not payer_id:
-                    missing.append("Missing PayerId")
-                error = (6, "Missing information in data: {}".format(", ".join(missing)))
+                    missing.append(_("Missing PayerId"))
+                error = (6, _("Missing information in data: {missing}").format(missing=", ".join(missing)))
 
         # Return error
         return error
@@ -932,9 +932,9 @@ class PaymentConfirmation(CodenerixModel):
             # Check if there is at least one remote confirmation for this payment
             pa = self.payment.paymentanswers.filter(error=False, ref__isnull=False).first()
             if not pa:
-                error = (4, "Payment is not executed, we didn't get yet the confirmation from REDSYS")
+                error = (4, _("Payment is not executed, we didn't get yet the confirmation from REDSYS"))
             elif self.payment.paymentconfirmations.filter(ref__isnull=False).count():
-                error = (10, "Payment is already confirmed")
+                error = (10, _("Payment is already confirmed"))
             else:
                 # Everything is fine, payer verified and payment authorized
                 self.ref = pa.ref
@@ -947,7 +947,7 @@ class PaymentConfirmation(CodenerixModel):
             self.save()
         else:
             # Wrong action (this service is valid only for confirm and cancel)
-            error = (6, "Wrong action: {}".format(self.action))
+            error = (6, _("Wrong action: {action}").format(action=self.action))
 
         # We won't get confirmation data from Redsys, not anymore!
         # else:
@@ -1133,13 +1133,13 @@ class PaymentAnswer(CodenerixModel):
                             payerinf = payment.to_dict()['payer']
                             # Verify all
                             if float(info['total']) != float(pr.total):
-                                raise PaymentError(3, "Total does not match: our={} paypal={}".format(float(pr.total), float(info['total'])))
+                                raise PaymentError(3, _("Total does not match: our={our} paypal={paypal}").format(our=float(pr.total), paypal=float(info['total'])))
                             elif info['currency'].upper() != pr.currency.iso4217.upper():
-                                raise PaymentError(3, "Currency does not math: our={} paypal={}".format(pr.currency.iso4217.upper(), info['currency'].upper()))
+                                raise PaymentError(3, _("Currency does not math: our={our} paypal={paypal}").format(our=pr.currency.iso4217.upper(), paypal=info['currency'].upper()))
                             elif payerinf['status'] != 'VERIFIED':
-                                raise PaymentError(3, "Payer hasn't been VERIFIED yet, it is {}".format(payerinf['status']))
+                                raise PaymentError(3, _("Payer hasn't been VERIFIED yet, it is {payer}").format(payer=payerinf['status']))
                             elif payerinf['payer_info']['payer_id'] != payer_id:
-                                raise PaymentError(3, "Wrong Payer ID: our={} paypal={}".format(payer_id, payerinf['payer_info']['payer_id']))
+                                raise PaymentError(3, _("Wrong Payer ID: our={our} paypal={paypal}").format(our=payer_id, paypal=payerinf['payer_info']['payer_id']))
                             else:
                                 # Everything is fine, payer verified and payment authorized
                                 request = {'payer_id': payer_id}
@@ -1155,15 +1155,15 @@ class PaymentAnswer(CodenerixModel):
                                     self.error = True
                                     self.error_txt = json.dumps(payment.error)
                         else:
-                            raise PaymentError(4, "Payment is not ready for executing, status is '{}' and it should be 'created'".format(state))
+                            raise PaymentError(4, _("Payment is not ready for executing, status is '{status}' and it should be 'created'").format(status=state))
                     else:
-                        raise PaymentError(5, "Payment not found!")
+                        raise PaymentError(5, _("Payment not found!"))
 
                 elif self.payment.protocol in ['redsys', 'redsysxml']:
                     # Protocols which do not need any work to get done during save() process
                     pass
                 else:
-                    raise PaymentError(1, "Unknown protocol '{}'".format(pr.protocol))
+                    raise PaymentError(1, _("Unknown protocol '{protocol}'").format(protocol=pr.protocol))
 
             else:
                 if settings.PAYMENTS.get('meta', {}).get('real', False):
@@ -1174,9 +1174,9 @@ class PaymentAnswer(CodenerixModel):
                     envself = 'REAL'
                 else:
                     envself = 'TEST'
-                raise PaymentError(2, "Wrong environment: this transaction is for '{}' environment and system is set to '{}'".format(envself, envsys))
+                raise PaymentError(2, _("Wrong environment: this transaction is for '{selfenviron}' environment and system is set to '{sysenviron}'".format(selfenviron=envself, sysenviron=envsys)))
         else:
-            raise PaymentError(4, "Payment has been cancelled/declined, access denied!")
+            raise PaymentError(4, _("Payment has been cancelled/declined, access denied!"))
 
         # Save data
         return super(PaymentAnswer, self).save()
@@ -1204,9 +1204,9 @@ class PaymentAnswer(CodenerixModel):
             # Check for errors
             error = None
             if not data:
-                error = (6, 'Request is empty')
+                error = (6, _('Request is empty'))
             elif pr.protocol not in ['redsys', 'redsysxml']:
-                error = (1, "Unknown protocol '{}'".format(self.protocol))
+                error = (1, _("Unknown protocol '{protocol}'").format(protocol=self.protocol))
             else:
 
                 for key in data:
@@ -1258,12 +1258,12 @@ class PaymentAnswer(CodenerixModel):
                                     # Everything whent fine
                                     answer['result'] = 'OK'
                                 else:
-                                    error = (3, "Amount doesn't match to the payment request: our={} - remote={}".format(self.payment.total, float(amount) / 100))
+                                    error = (3, _("Amount doesn't match to the payment request: our={our} - remote={remote}").format(our=self.payment.total, remote=float(amount) / 100))
 
                             else:
                                 # Find the error if any
                                 if not amount:
-                                    error = (3, "Missing amount in your confirmation request")
+                                    error = (3, _("Missing amount in your confirmation request"))
                                 elif not authorisation:
                                     # Error code
                                     errorcode = params.get('Ds_ErrorCode', None)
@@ -1272,26 +1272,26 @@ class PaymentAnswer(CodenerixModel):
                                         answer['errorcode'] = errorcode
                                         error = (4, redsys_error(errorcode))
                                     else:
-                                        error = (3, "Missing authorisation code in your confirmation request")
+                                        error = (3, _("Missing authorisation code in your confirmation request"))
                                 else:
-                                    error = (3, "Missing info in your confirmation request")
+                                    error = (3, _("Missing info in your confirmation request"))
 
                         else:
-                            error = (9, "Invalid signature version: our={} - remote={}".format(signature_internal, signature))
+                            error = (9, _("Invalid signature version: our={our} - remote={remote}").format(our=signature_internal, remote=signature))
 
                     else:
-                        error = (9, "Invalid signature version")
+                        error = (9, _("Invalid signature version"))
                 else:
                     missing = []
                     if not params:
-                        missing.append("Ds_MerchantParameters has wrong encoding")  # No Base64
+                        missing.append(_("Ds_MerchantParameters has wrong encoding"))  # No Base64
                     if not paramsb64:
-                        missing.append("Missing Ds_MerchantParameters")
+                        missing.append(_("Missing Ds_MerchantParameters"))
                     if not signature:
-                        missing.append("Missing Ds_Signature")
+                        missing.append(_("Missing Ds_Signature"))
                     if not signature_version:
-                        missing.append("Missing Ds_SignatureVersion")
-                    error = (6, "Missing information in data: {}".format(", ".join(missing)))
+                        missing.append(_("Missing Ds_SignatureVersion"))
+                    error = (6, _("Missing information in data: {missing}").format(missing=", ".join(missing)))
 
             # If there are errors
             if error:
@@ -1319,7 +1319,7 @@ class PaymentAnswer(CodenerixModel):
             return answer
 
         else:
-            raise PaymentError(7, "Payment already processed")
+            raise PaymentError(7, _("Payment already processed"))
 
 
 class PaymentError(Exception):

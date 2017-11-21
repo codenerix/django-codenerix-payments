@@ -23,11 +23,11 @@
 
     <span ng-if='row.is_paid || row.cancelled=="True"'>-</span>
     <span ng-if='!row.is_paid && row.cancelled=="False"'>
-        <span ng-if='!row.get_approval_list.noplatform'>
+        <span ng-if='!row.get_approval_list.error'>
             <button ng-click="submit_approval(row.pk, row.get_approval_list)" ng-disabled='row.is_paid' class='btn btn-info btn-xs'>{{data.meta.gentranslate.pay}}</button>
             <div style='display:none' id='PaymentInternalFormHTML{{row.pk}}'></div>
         </span>
-        <span ng-if='row.get_approval_list.noplatform' class='text-danger'>{{row.get_approval_list.noplatform}}</span>
+        <span ng-if='row.get_approval_list.error' class='text-danger'>{{row.get_approval_list.error}}</span>
         <button ng-click="submit_cancel(row.locator, data.meta.context.cancelurl)" class='btn btn-danger btn-xs'>{{data.meta.gentranslate.cancel}}</button>
     </span>
 </td>
