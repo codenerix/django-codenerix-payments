@@ -353,7 +353,7 @@ class PaymentRequest(CodenerixModel):
         try:
             apr = self.get_approval()
         except PaymentError as e:
-            apr = {'error': e}
+            apr = {'error': str(e)}
         return apr
 
     def get_approval(self):
