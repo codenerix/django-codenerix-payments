@@ -333,7 +333,7 @@ class PaymentRequest(CodenerixModel):
         fields = []
         fields.append(('is_paid', _('Is paid?'), 100))
         fields.append(('locator', _('Locator'), 100))
-        fields.append(('order', _('Order'), 100))
+        fields.append(('order', _('Order Reference'), 100))
         fields.append(('request_date', _('Request date'), 100))
         fields.append(('answer_date', _('Answer date'), 100))
         fields.append(('platform', _('Platform'), 100))
@@ -765,7 +765,7 @@ class PaymentConfirmation(CodenerixModel):
     def __fields__(self, info):
         fields = []
         fields.append(('payment__locator', _('Locator'), 100))
-        fields.append(('payment__order', _('Order'), 100))
+        fields.append(('payment__order', _('Order Reference'), 100))
         fields.append(('created', _('Created'), 100))
         fields.append(('action', _('Action'), 100))
         fields.append(('payment__total', _('Total'), 100))
@@ -1074,7 +1074,7 @@ class PaymentAnswer(CodenerixModel):
     def __fields__(self, info):
         fields = []
         fields.append(('payment__locator', _('Locator'), 100))
-        fields.append(('payment__order', _('Order'), 100))
+        fields.append(('payment__order', _('Order Reference'), 100))
         fields.append(('request_date', _('Request date'), 100))
         fields.append(('answer_date', _('Answer date'), 100))
         fields.append(('payment__total', _('Total'), 100))
