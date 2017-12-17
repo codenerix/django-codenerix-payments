@@ -34,7 +34,7 @@ from Crypto.Hash import HMAC, SHA256
 from django.db import models
 from django.utils.translation import ugettext_lazy as _
 from django.conf import settings
-from django.core.urlresolvers import reverse, resolve
+from django.urls import reverse, resolve
 from django.utils import timezone
 from django.utils.encoding import smart_text
 from django.core.validators import MaxValueValidator
@@ -308,7 +308,7 @@ class PaymentRequest(CodenerixModel):
     ref = models.CharField(_('Reference'), max_length=50, blank=False, null=True, default=None)
     order = models.PositiveIntegerField(_('Order Reference'), blank=False, null=False, validators=[MaxValueValidator(2821109907455)])  # 2821109907455 => codenerix::hex36 = 8 char
     reverse = models.CharField(_('Reverse'), max_length=64, blank=False, null=False)
-    currency = models.ForeignKey(Currency, blank=False, null=False, related_name='payments')
+    currency = models.ForeignKey(Currency, blank=False, null=False, related_name='payments', on_delete=models.CASCADE)
     platform = models.CharField(_('Platform'), max_length=20, blank=False, null=False)
     protocol = models.CharField(_('Protocol'), choices=PAYMENT_PROTOCOL_CHOICES, max_length=10, blank=False, null=False)
     real = models.BooleanField(_('Real'), blank=False, null=False, default=False)
@@ -749,7 +749,7 @@ class PaymentConfirmation(CodenerixModel):
     '''
     Store payment confirmations from users
     '''
-    payment = models.ForeignKey(PaymentRequest, blank=False, null=False, related_name='paymentconfirmations')
+    payment = models.ForeignKey(PaymentRequest, blank=False, null=False, related_name='paymentconfirmations', on_delete=models.CASCADE)
     ref = models.CharField(_('Reference'), max_length=50, blank=False, null=True, default=None)
     action = models.CharField(_('Action'), max_length=7, choices=PAYMENT_CONFIRMATION_CHOICES, blank=False, null=False)
     data = models.TextField(_('Data'), blank=True, null=True)
@@ -1051,7 +1051,7 @@ class PaymentAnswer(CodenerixModel):
     '''
     Store payment answers from the remote protocol
     '''
-    payment = models.ForeignKey(PaymentRequest, blank=False, null=False, related_name='paymentanswers')
+    payment = models.ForeignKey(PaymentRequest, blank=False, null=False, related_name='paymentanswers', on_delete=models.CASCADE)
     ref = models.CharField(_('Reference'), max_length=50, blank=False, null=True, default=None)
     error = models.BooleanField(_('Error'), blank=False, null=False, default=False)
     error_txt = models.TextField(_('Error Text'), blank=True, null=True)
