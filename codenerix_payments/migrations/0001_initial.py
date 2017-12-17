@@ -76,7 +76,7 @@ class Migration(migrations.Migration):
                 ('answer', models.TextField(null=True, verbose_name='Respuesta', blank=True)),
                 ('request_date', models.DateTimeField(verbose_name='Fecha de solicitud', null=True, editable=False, blank=True)),
                 ('answer_date', models.DateTimeField(verbose_name='Fecha de respuesta', null=True, editable=False, blank=True)),
-                ('currency', models.ForeignKey(related_name='payments', to='codenerix_payments.Currency')),
+                ('currency', models.ForeignKey(on_delete=models.CASCADE, related_name='payments', to='codenerix_payments.Currency')),
             ],
             options={
                 'permissions': [('list_paymentrequest', 'Can list paymentrequest'), ('detail_paymentrequest', 'Can view paymentrequest')],
@@ -85,11 +85,11 @@ class Migration(migrations.Migration):
         migrations.AddField(
             model_name='paymentconfirmation',
             name='payment',
-            field=models.ForeignKey(related_name='paymentconfirmations', to='codenerix_payments.PaymentRequest'),
+            field=models.ForeignKey(on_delete=models.CASCADE, related_name='paymentconfirmations', to='codenerix_payments.PaymentRequest'),
         ),
         migrations.AddField(
             model_name='paymentanswer',
             name='payment',
-            field=models.ForeignKey(related_name='paymentanswers', to='codenerix_payments.PaymentRequest'),
+            field=models.ForeignKey(on_delete=models.CASCADE, related_name='paymentanswers', to='codenerix_payments.PaymentRequest'),
         ),
     ]
