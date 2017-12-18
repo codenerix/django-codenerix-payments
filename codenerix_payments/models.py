@@ -804,7 +804,7 @@ class PaymentConfirmation(CodenerixModel):
                 if pa.count():
                     error = (7, _("Payment already processed"))
                     self.error = True
-                    self.error_txt = json.dumps({'error': error[0], 'errortxt': error[1]})
+                    self.error_txt = json.dumps({'error': error[0], 'errortxt': str(error[1])})
                     self.save()
                     raise PaymentError(*error)
 
@@ -838,7 +838,7 @@ class PaymentConfirmation(CodenerixModel):
         # If there was some error, save and launch it!
         if error:
             self.error = True
-            self.error_txt = json.dumps({'error': error[0], 'errortxt': error[1]})
+            self.error_txt = json.dumps({'error': error[0], 'errortxt': str(error[1])})
             self.save()
             raise PaymentError(*error)
 
@@ -1298,11 +1298,11 @@ class PaymentAnswer(CodenerixModel):
 
                 # Prepare to save errors
                 self.error = True
-                self.error_txt = json.dumps({'error': error[0], 'errortxt': error[1]})
+                self.error_txt = json.dumps({'error': error[0], 'errortxt': str(error[1])})
 
                 # Set errors in the answer
                 answer['error'] = error[0]
-                answer['errortxt'] = error[1]
+                answer['errortxt'] = str(error[1])
 
             else:
 
