@@ -15,6 +15,12 @@ Features
 * `Paypal <https://www.paypal.com/>`_
 * `Redsys <http://www.redsys.es/en/>`_
 
+*********
+Changelog
+*********
+
+2018-01-17 - Codenerix Payments v1.x is incompatible with v2.x, `what has changed and how to migrate to v2.x? <https://github.com/centrologic/django-codenerix-payments/wiki/Codenerix-Payments-version-1.x-is-icompatible-with-2.x>`_.
+
 ****
 Demo
 ****
