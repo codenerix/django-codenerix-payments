@@ -42,6 +42,8 @@ from django.core.validators import MaxValueValidator
 from codenerix.models import CodenerixModel
 from codenerix.helpers import CodenerixEncoder
 
+CURRENCY_MAX_DIGITS = getattr(settings, 'CDNX_INVOICING_CURRENCY_MAX_DIGITS', 10)
+CURRENCY_DECIMAL_PLACES = getattr(settings, 'CDNX_INVOICING_CURRENCY_DECIMAL_PLACES', 2)
 
 PAYMENT_PROTOCOL_CHOICES = (
     ('paypal', _('Paypal')),
@@ -269,7 +271,7 @@ class Currency(CodenerixModel):
     name = models.CharField(_('Name'), max_length=15, blank=False, null=False, unique=True)
     symbol = models.CharField(_('Symbol'), max_length=2, blank=False, null=False, unique=True)
     iso4217 = models.CharField(_('ISO 4217 Code'), max_length=3, blank=False, null=False, unique=True)
-    price = models.FloatField(_('Price'), blank=False, null=False)
+    price = models.DecimalField(_('Price'), blank=False, null=False, max_digits=CURRENCY_MAX_DIGITS, decimal_places=CURRENCY_DECIMAL_PLACES)
 
     def __unicode__(self):
         return u"{0} ({1})".format(smart_text(self.name), smart_text(self.symbol))
