@@ -18,7 +18,7 @@ setup(
     license='Apache License Version 2.0',
     description='Codenerix Payments is a module that enables CODENERIX to manage payments and let clients to pay online.',
     long_description=README,
-    url='https://github.com/centrologic/django-codenerix-payments',
+    url='https://github.com/codenerix/django-codenerix-payments',
     author=", ".join(codenerix_payments.__authors__),
     keywords=['django', 'codenerix', 'management', 'erp', 'crm', 'payments', ],
     platforms=['OS Independent'],
