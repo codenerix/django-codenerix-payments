@@ -6,16 +6,23 @@ import django.core.validators
 from django.db import migrations, models
 import django.db.models.deletion
 
+
 def setup(apps, schema_editor):
     # Get the model
     Currency = apps.get_model("codenerix_payments", "Currency")
     # Set the first currency to EURO
     currency = Currency()
     currency.name = "Euro"
-    currency.symbol = u"€".encode("utf-8")
+    currency.symbol = "€"
     currency.iso4217 = 'EUR'
     currency.price = 1.0
-    currency.save()
+    try:
+        currency.save()
+    except Exception:
+        # Something went wrong, try in the old fashion
+        currency.symbol = u"€".encode("utf-8")
+        currency.save()
+
 
 class Migration(migrations.Migration):
 
