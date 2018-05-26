@@ -32,7 +32,7 @@ class Migration(migrations.Migration):
                 ('created', models.DateTimeField(auto_now_add=True, verbose_name='Created')),
                 ('updated', models.DateTimeField(auto_now=True, verbose_name='Updated')),
                 ('name', models.CharField(max_length=15, unique=True, verbose_name='Name')),
-                ('symbol', models.CharField(max_length=2, unique=True, verbose_name='Symbol')),
+                ('symbol', models.CharField(max_length=3, unique=True, verbose_name='Symbol')),
                 ('iso4217', models.CharField(max_length=3, unique=True, verbose_name='ISO 4217 Code')),
                 ('price', models.DecimalField(decimal_places=2, max_digits=10, verbose_name='Price')),
             ],
