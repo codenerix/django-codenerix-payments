@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PACKAGE VERSION\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2017-11-23 10:14+0100\n"
+"POT-Creation-Date: 2022-05-17 15:46+0200\n"
 "PO-Revision-Date: 2017-11-23 09:08-0015\n"
 "Last-Translator: b'nombe apellidos <soleronline@gmail.com>'\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -23,320 +23,320 @@ msgstr ""
 msgid "Details"
 msgstr "Detalles"
 
-#: codenerix_payments/models.py:47
+#: codenerix_payments/models.py:49
 msgid "Paypal"
 msgstr "Paypal"
 
-#: codenerix_payments/models.py:48
+#: codenerix_payments/models.py:50
 msgid "Redsys"
 msgstr ""
 
-#: codenerix_payments/models.py:49
+#: codenerix_payments/models.py:51
 msgid "Redsys XML"
 msgstr ""
 
-#: codenerix_payments/models.py:53
+#: codenerix_payments/models.py:55
 msgid "Confirm"
 msgstr "Confirmar"
 
-#: codenerix_payments/models.py:54
+#: codenerix_payments/models.py:56
 msgid "Cancel"
 msgstr "Cancelar"
 
-#: codenerix_payments/models.py:262
+#: codenerix_payments/models.py:264
 #, python-brace-format
 msgid "UNKNOWN CODE {code}"
 msgstr ""
 
-#: codenerix_payments/models.py:269 codenerix_payments/models.py:282
+#: codenerix_payments/models.py:271 codenerix_payments/models.py:284
 msgid "Name"
 msgstr "Nombre"
 
-#: codenerix_payments/models.py:270 codenerix_payments/models.py:283
+#: codenerix_payments/models.py:272 codenerix_payments/models.py:285
 msgid "Symbol"
 msgstr "Simbolo"
 
-#: codenerix_payments/models.py:271
+#: codenerix_payments/models.py:273
 msgid "ISO 4217 Code"
 msgstr ""
 
-#: codenerix_payments/models.py:272 codenerix_payments/models.py:284
+#: codenerix_payments/models.py:274 codenerix_payments/models.py:286
 msgid "Price"
 msgstr "Precio"
 
-#: codenerix_payments/models.py:307 codenerix_payments/models.py:335
-#: codenerix_payments/models.py:767 codenerix_payments/models.py:1076
+#: codenerix_payments/models.py:309 codenerix_payments/models.py:337
+#: codenerix_payments/models.py:769 codenerix_payments/models.py:1078
 msgid "Locator"
 msgstr "Localizador"
 
-#: codenerix_payments/models.py:308 codenerix_payments/models.py:753
-#: codenerix_payments/models.py:1055
+#: codenerix_payments/models.py:310 codenerix_payments/models.py:755
+#: codenerix_payments/models.py:1057
 msgid "Reference"
 msgstr "Referencia"
 
-#: codenerix_payments/models.py:309 codenerix_payments/models.py:336
-#: codenerix_payments/models.py:768 codenerix_payments/models.py:1077
+#: codenerix_payments/models.py:311 codenerix_payments/models.py:338
+#: codenerix_payments/models.py:770 codenerix_payments/models.py:1079
 #, fuzzy
 #| msgid "Reference"
 msgid "Order Reference"
 msgstr "Referencia"
 
-#: codenerix_payments/models.py:310
+#: codenerix_payments/models.py:312
 msgid "Reverse"
 msgstr ""
 
-#: codenerix_payments/models.py:312 codenerix_payments/models.py:339
+#: codenerix_payments/models.py:314 codenerix_payments/models.py:341
 msgid "Platform"
 msgstr "Plataforma"
 
-#: codenerix_payments/models.py:313 codenerix_payments/models.py:340
+#: codenerix_payments/models.py:315 codenerix_payments/models.py:342
 msgid "Protocol"
 msgstr "Protocolo"
 
-#: codenerix_payments/models.py:314
+#: codenerix_payments/models.py:316
 msgid "Real"
 msgstr "Real"
 
-#: codenerix_payments/models.py:315 codenerix_payments/models.py:344
-#: codenerix_payments/models.py:756 codenerix_payments/models.py:773
-#: codenerix_payments/models.py:1056 codenerix_payments/models.py:1082
+#: codenerix_payments/models.py:317 codenerix_payments/models.py:346
+#: codenerix_payments/models.py:758 codenerix_payments/models.py:775
+#: codenerix_payments/models.py:1058 codenerix_payments/models.py:1084
 #: codenerix_payments/templates/codenerix_payments/confirmation.html:5
 msgid "Error"
 msgstr "Error"
 
-#: codenerix_payments/models.py:316 codenerix_payments/models.py:757
-#: codenerix_payments/models.py:1057
+#: codenerix_payments/models.py:318 codenerix_payments/models.py:759
+#: codenerix_payments/models.py:1059
 msgid "Error Text"
 msgstr "Error del text"
 
-#: codenerix_payments/models.py:317 codenerix_payments/models.py:343
+#: codenerix_payments/models.py:319 codenerix_payments/models.py:345
 msgid "Cancelled"
 msgstr "Cancelado"
 
-#: codenerix_payments/models.py:318 codenerix_payments/models.py:341
-#: codenerix_payments/models.py:771 codenerix_payments/models.py:1080
+#: codenerix_payments/models.py:320 codenerix_payments/models.py:343
+#: codenerix_payments/models.py:773 codenerix_payments/models.py:1082
 msgid "Total"
 msgstr "Total"
 
-#: codenerix_payments/models.py:319 codenerix_payments/views.py:123
+#: codenerix_payments/models.py:321 codenerix_payments/views.py:123
 msgid "Notes"
 msgstr "Notas"
 
-#: codenerix_payments/models.py:321 codenerix_payments/models.py:1059
+#: codenerix_payments/models.py:323 codenerix_payments/models.py:1061
 #: codenerix_payments/views.py:113 codenerix_payments/views.py:222
 msgid "Request"
 msgstr "Solicitud"
 
-#: codenerix_payments/models.py:322 codenerix_payments/models.py:1060
+#: codenerix_payments/models.py:324 codenerix_payments/models.py:1062
 #: codenerix_payments/views.py:118 codenerix_payments/views.py:227
 msgid "Answer"
 msgstr "Respuesta"
 
-#: codenerix_payments/models.py:323 codenerix_payments/models.py:337
-#: codenerix_payments/models.py:1061 codenerix_payments/models.py:1078
+#: codenerix_payments/models.py:325 codenerix_payments/models.py:339
+#: codenerix_payments/models.py:1063 codenerix_payments/models.py:1080
 msgid "Request date"
 msgstr "Fecha de solicitud"
 
-#: codenerix_payments/models.py:324 codenerix_payments/models.py:338
-#: codenerix_payments/models.py:1062 codenerix_payments/models.py:1079
+#: codenerix_payments/models.py:326 codenerix_payments/models.py:340
+#: codenerix_payments/models.py:1064 codenerix_payments/models.py:1081
 msgid "Answer date"
 msgstr "Fecha de respuesta"
 
-#: codenerix_payments/models.py:334
+#: codenerix_payments/models.py:336
 msgid "Is paid?"
 msgstr "¿Está pagado?"
 
-#: codenerix_payments/models.py:342 codenerix_payments/models.py:772
-#: codenerix_payments/models.py:1081
+#: codenerix_payments/models.py:344 codenerix_payments/models.py:774
+#: codenerix_payments/models.py:1083
 msgid "Currency"
 msgstr "Moneda"
 
-#: codenerix_payments/models.py:346
+#: codenerix_payments/models.py:348
 #, fuzzy
 #| msgid "Paypal"
 msgid "Pay"
 msgstr "Paypal"
 
-#: codenerix_payments/models.py:371 codenerix_payments/models.py:599
-#: codenerix_payments/models.py:824 codenerix_payments/models.py:1166
-#: codenerix_payments/models.py:1209
+#: codenerix_payments/models.py:373 codenerix_payments/models.py:601
+#: codenerix_payments/models.py:826 codenerix_payments/models.py:1168
+#: codenerix_payments/models.py:1211
 #, python-brace-format
 msgid "Unknown protocol '{protocol}'"
 msgstr "El protocolo '{protocol}' es desconocido"
 
-#: codenerix_payments/models.py:373 codenerix_payments/models.py:567
+#: codenerix_payments/models.py:375 codenerix_payments/models.py:569
 #, python-brace-format
 msgid "Unknown platform '{platform}'"
 msgstr "La plataforma '{platform}' es desconocida"
 
-#: codenerix_payments/models.py:408
+#: codenerix_payments/models.py:410
 #, python-brace-format
 msgid ""
 "Amount doesn't match to the payment request: stored={stored} - "
 "protocol={protocol}"
 msgstr ""
 
-#: codenerix_payments/models.py:425
+#: codenerix_payments/models.py:427
 #, python-brace-format
 msgid ""
 "Unknown currency for this protocol '{currency}' (available are: EUR, USD, "
 "GBP, JPY, CHF & CAD)"
 msgstr ""
 
-#: codenerix_payments/models.py:610 codenerix_payments/models.py:834
-#: codenerix_payments/models.py:1177
+#: codenerix_payments/models.py:612 codenerix_payments/models.py:836
+#: codenerix_payments/models.py:1179
 #, python-brace-format
 msgid ""
 "Wrong environment: this transaction is for '{selfenviron}' environment and "
 "system is set to '{sysenviron}'"
 msgstr ""
 
-#: codenerix_payments/models.py:612
+#: codenerix_payments/models.py:614
 #, python-brace-format
 msgid "Platform '{platform}' not configured in your system"
 msgstr ""
 
-#: codenerix_payments/models.py:754 codenerix_payments/models.py:770
+#: codenerix_payments/models.py:756 codenerix_payments/models.py:772
 #: codenerix_payments/templates/codenerix_payments/confirmation.html:4
 msgid "Action"
 msgstr "Acción"
 
-#: codenerix_payments/models.py:755
+#: codenerix_payments/models.py:757
 msgid "Data"
 msgstr "Dato"
 
-#: codenerix_payments/models.py:769
+#: codenerix_payments/models.py:771
 msgid "Created"
 msgstr "Creado"
 
-#: codenerix_payments/models.py:774 codenerix_payments/models.py:1083
+#: codenerix_payments/models.py:776 codenerix_payments/models.py:1085
 #, fuzzy
 #| msgid "Request date"
 msgid "Request Ref"
 msgstr "Fecha de solicitud"
 
-#: codenerix_payments/models.py:775 codenerix_payments/models.py:1084
+#: codenerix_payments/models.py:777 codenerix_payments/models.py:1086
 msgid "Ref"
 msgstr ""
 
-#: codenerix_payments/models.py:805 codenerix_payments/models.py:1322
+#: codenerix_payments/models.py:807 codenerix_payments/models.py:1324
 msgid "Payment already processed"
 msgstr "Pago ya procesado"
 
-#: codenerix_payments/models.py:836 codenerix_payments/models.py:1179
+#: codenerix_payments/models.py:838 codenerix_payments/models.py:1181
 msgid "Payment has been cancelled/declined, access denied!"
 msgstr "El pago ha sido cancelado o denegado, ¡acceso denegado!"
 
-#: codenerix_payments/models.py:886 codenerix_payments/models.py:1136
+#: codenerix_payments/models.py:888 codenerix_payments/models.py:1138
 #, python-brace-format
 msgid "Total does not match: our={our} paypal={paypal}"
 msgstr ""
 
-#: codenerix_payments/models.py:888 codenerix_payments/models.py:1138
+#: codenerix_payments/models.py:890 codenerix_payments/models.py:1140
 #, python-brace-format
 msgid "Currency does not math: our={our} paypal={paypal}"
 msgstr ""
 
-#: codenerix_payments/models.py:890 codenerix_payments/models.py:1140
+#: codenerix_payments/models.py:892 codenerix_payments/models.py:1142
 #, python-brace-format
 msgid "Payer hasn't been VERIFIED yet, it is {payer}"
 msgstr "El pagador '{payer}' no ha sido VERIFICADO"
 
-#: codenerix_payments/models.py:892 codenerix_payments/models.py:1142
+#: codenerix_payments/models.py:894 codenerix_payments/models.py:1144
 #, python-brace-format
 msgid "Wrong Payer ID: our={our} paypal={paypal}"
 msgstr ""
 
-#: codenerix_payments/models.py:905
+#: codenerix_payments/models.py:907
 #, python-brace-format
 msgid ""
 "Payment is not ready for confirmation, status is '{status}' and it should be "
 "'created'"
 msgstr ""
 
-#: codenerix_payments/models.py:908 codenerix_payments/models.py:1160
+#: codenerix_payments/models.py:910 codenerix_payments/models.py:1162
 msgid "Payment not found!"
 msgstr "¡Pago no encontrado!"
 
-#: codenerix_payments/models.py:921
+#: codenerix_payments/models.py:923
 msgid "Missing paymentId"
 msgstr "Falta el ID del pago"
 
-#: codenerix_payments/models.py:923
+#: codenerix_payments/models.py:925
 msgid "Missing PayerId"
 msgstr "Falta el ID del pagador"
 
-#: codenerix_payments/models.py:924 codenerix_payments/models.py:1294
+#: codenerix_payments/models.py:926 codenerix_payments/models.py:1296
 #, python-brace-format
 msgid "Missing information in data: {missing}"
 msgstr ""
 
-#: codenerix_payments/models.py:935
+#: codenerix_payments/models.py:937
 msgid "Payment is not executed, we didn't get yet the confirmation from REDSYS"
 msgstr ""
 
-#: codenerix_payments/models.py:937
+#: codenerix_payments/models.py:939
 msgid "Payment is already confirmed"
 msgstr ""
 
-#: codenerix_payments/models.py:950
+#: codenerix_payments/models.py:952
 #, python-brace-format
 msgid "Wrong action: {action}"
 msgstr ""
 
-#: codenerix_payments/models.py:1158
+#: codenerix_payments/models.py:1160
 #, python-brace-format
 msgid ""
 "Payment is not ready for executing, status is '{status}' and it should be "
 "'created'"
 msgstr ""
 
-#: codenerix_payments/models.py:1207
+#: codenerix_payments/models.py:1209
 #, fuzzy
 #| msgid "Request date"
 msgid "Request is empty"
 msgstr "Fecha de solicitud"
 
-#: codenerix_payments/models.py:1261
+#: codenerix_payments/models.py:1263
 #, python-brace-format
 msgid ""
 "Amount doesn't match to the payment request: our={our} - remote={remote}"
 msgstr ""
 
-#: codenerix_payments/models.py:1266
+#: codenerix_payments/models.py:1268
 msgid "Missing amount in your confirmation request"
 msgstr ""
 
-#: codenerix_payments/models.py:1275
+#: codenerix_payments/models.py:1277
 msgid "Missing authorisation code in your confirmation request"
 msgstr ""
 
-#: codenerix_payments/models.py:1277
+#: codenerix_payments/models.py:1279
 msgid "Missing info in your confirmation request"
 msgstr ""
 
-#: codenerix_payments/models.py:1280
+#: codenerix_payments/models.py:1282
 #, python-brace-format
 msgid "Invalid signature version: our={our} - remote={remote}"
 msgstr ""
 
-#: codenerix_payments/models.py:1283
+#: codenerix_payments/models.py:1285
 msgid "Invalid signature version"
 msgstr ""
 
-#: codenerix_payments/models.py:1287
+#: codenerix_payments/models.py:1289
 msgid "Ds_MerchantParameters has wrong encoding"
 msgstr ""
 
-#: codenerix_payments/models.py:1289
+#: codenerix_payments/models.py:1291
 msgid "Missing Ds_MerchantParameters"
 msgstr ""
 
-#: codenerix_payments/models.py:1291
+#: codenerix_payments/models.py:1293
 msgid "Missing Ds_Signature"
 msgstr ""
 
-#: codenerix_payments/models.py:1293
+#: codenerix_payments/models.py:1295
 msgid "Missing Ds_SignatureVersion"
 msgstr ""
 
