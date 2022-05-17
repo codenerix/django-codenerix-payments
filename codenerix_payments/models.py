@@ -2,7 +2,7 @@
 #
 # django-codenerix-payments
 #
-# Copyright 2017 Centrologic Computational Logistic Center S.L.
+# Codenerix GNU
 #
 # Project URL : http://www.codenerix.com
 #
@@ -32,11 +32,11 @@ from Crypto.Hash import HMAC, SHA256
 # from suds.client import Client as SOAPClient
 
 from django.db import models
-from django.utils.translation import ugettext_lazy as _
+from django.utils.translation import gettext_lazy as _
 from django.conf import settings
 from django.urls import reverse, resolve
 from django.utils import timezone
-from django.utils.encoding import smart_text
+from django.utils.encoding import smart_str
 from django.core.validators import MaxValueValidator
 
 from codenerix.models import CodenerixModel
@@ -274,7 +274,7 @@ class Currency(CodenerixModel):
     price = models.DecimalField(_('Price'), blank=False, null=False, max_digits=CURRENCY_MAX_DIGITS, decimal_places=CURRENCY_DECIMAL_PLACES)
 
     def __unicode__(self):
-        return u"{0} ({1})".format(smart_text(self.name), smart_text(self.symbol))
+        return u"{0} ({1})".format(smart_str(self.name), smart_str(self.symbol))
 
     def __str__(self):
         return self.__unicode__()
