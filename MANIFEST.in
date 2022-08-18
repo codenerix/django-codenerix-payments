@@ -9,3 +9,4 @@ recursive-include codenerix_payments/templates *
 recursive-include codenerix_payments/locale *
 recursive-include codenerix_payments/management *
 recursive-include codenerix_payments/migrations *
+recursive-include codenerix_payments/sdk_yeepay *

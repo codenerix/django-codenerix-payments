@@ -21,7 +21,24 @@
 from django.utils.translation import gettext as _
 
 from codenerix.forms import GenModelForm
-from codenerix_payments.models import PaymentRequest
+from codenerix_payments.models import PaymentRequest, Currency
+
+
+class CurrencyForm(GenModelForm):
+    class Meta:
+        model = Currency
+        exclude = []
+
+    def __groups__(self):
+        g = [
+            (_('Details'), 12,
+                ['name', 6],
+                ['symbol', 6],
+                ['iso4217', 6],
+                ['price', 6],
+                ['total', 6],)
+        ]
+        return g
 
 
 class PaymentRequestForm(GenModelForm):
@@ -30,9 +47,8 @@ class PaymentRequestForm(GenModelForm):
         exclude = [
             'locator',
             'ref',
-            'order',
-            'reverse',
-            'currency',
+            'order_ref',
+            'user',
             'protocol',
             'real',
             'error',
@@ -48,8 +64,12 @@ class PaymentRequestForm(GenModelForm):
         g = [
             (_('Details'), 12,
                 ['total', 6],
+                ['currency', 6],
                 ['platform', 6],
-                ['notes', 12],)
+                ['reverse', 6],
+                ['order', 6],
+                ['notes', 6],
+                ['feedback', 12],)
         ]
         return g
 
@@ -63,6 +83,7 @@ class PaymentRequestUpdateForm(GenModelForm):
             'platform',
             'locator',
             'order',
+            'order_ref',
             'reverse',
             'currency',
             'protocol',

@@ -3,6 +3,9 @@
 <table>
     <tr><td><u>{% trans "Action" %}:</u></td><td>{{action}}</td></tr>
     <tr><td><u>{% trans "Error" %}:</u></td><td>{{error}}</td></tr>
+    {% if errortxt %}
+        <tr><td><u>{% trans "Error explained" %}:</u></td><td>{{errortxt}}</td></tr>
+    {% endif %}
     <tr><td><u>{% trans "Requested" %}:</u></td><td>{{request.request_date}}</td></tr>
     {% if confirmation %}
         <tr><td><u>{% trans "Answered" %}:</u></td><td>{{confirmation.answer_date}}</td></tr>

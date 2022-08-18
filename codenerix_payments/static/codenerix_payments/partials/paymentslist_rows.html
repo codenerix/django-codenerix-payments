@@ -1,6 +1,8 @@
+<td align='center'>{{row.user|codenerix}}</td>
 <td align='center'><span codenerix-html-compile='row.is_paid|codenerix'></td>
 <td>{{row.locator|codenerix}}</td>
 <td>{{row.order|codenerix}}</td>
+<td>{{row.order_ref|codenerix}}</td>
 <td>{{row.request_date|codenerix}}</td>
 <td>{{row.answer_date|codenerix}}</td>
 <td>{{row.platform|codenerix}}</td>
@@ -19,9 +21,21 @@
         <span ng-if='row.error=="False"' class='text-success'>{{data.meta.gentranslate.no}}</span>
     </b>
 </td>
+<td>{{row.notes|codenerix}}</td>
+<td>{{row.ip|codenerix}}</td>
 <td ng-click="$event.stopPropagation();" ng-controller="codenerixPaymentRequestCtrl">
 
-    <span ng-if='row.is_paid || row.cancelled=="True"'>-</span>
+    <span ng-if='row.is_paid || row.cancelled=="True"'>
+        <span ng-if='row.is_paid && row.cancelled=="False"'>
+            <button class='btn btn-success btn-xs'>{{data.meta.gentranslate.paid}}</button>
+        </span>
+        <span ng-if='!row.is_paid && row.cancelled=="True"'>
+            <button class='btn btn-secondary btn-xs'>{{data.meta.gentranslate.cancelled}}</button>
+        </span>
+        <span ng-if='row.is_paid && row.cancelled=="True"'>
+            <button class='btn btn-danger btn-xs'>{{data.meta.gentranslate.error}}</button>
+        </span>
+    </span>
     <span ng-if='!row.is_paid && row.cancelled=="False"'>
         <span ng-if='!row.get_approval_list.error'>
             <button ng-click="submit_approval(row.pk, row.get_approval_list)" ng-disabled='row.is_paid' class='btn btn-info btn-xs'>{{data.meta.gentranslate.pay}}</button>
