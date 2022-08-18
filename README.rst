@@ -18,12 +18,6 @@ This module support the next providers:
 * `Redsys <https://www.redsys.es/en/>`_
 * `Yeepay <https://yeepay.com/>`_
 
-*********
-Changelog
-*********
-
-2018-01-17 - Codenerix Payments v1.x is incompatible with v2.x, `what has changed and how to migrate to v2.x? <https://github.com/codenerix/django-codenerix-payments/wiki/Codenerix-Payments-version-1.x-is-icompatible-with-2.x>`_.
-
 ****
 Demo
 ****
@@ -41,8 +35,7 @@ Quickstart
 
 1. Install this package::
 
-    For python 2: sudo pip2 install django-codenerix-payments
-    For python 3: sudo pip3 install django-codenerix-payments
+    sudo pip3 install django-codenerix-payments
 
 2. Add "codenerix_payments" to your INSTALLED_APPS setting like this::
 
