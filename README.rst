@@ -12,8 +12,11 @@ Codenerix Payments is a module that enables `CODENERIX <https://www.codenerix.co
 Features
 ********
 
+This module support the next providers:
+
 * `Paypal <https://www.paypal.com/>`_
-* `Redsys <http://www.redsys.es/en/>`_
+* `Redsys <https://www.redsys.es/en/>`_
+* `Yeepay <https://yeepay.com/>`_
 
 *********
 Changelog
