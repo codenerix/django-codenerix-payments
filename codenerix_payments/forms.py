@@ -31,12 +31,14 @@ class CurrencyForm(GenModelForm):
 
     def __groups__(self):
         g = [
-            (_('Details'), 12,
-                ['name', 6],
-                ['symbol', 6],
-                ['iso4217', 6],
-                ['price', 6],
-                ['total', 6],)
+            (
+                _("Details"),
+                12,
+                ["name", 6],
+                ["symbol", 6],
+                ["iso4217", 6],
+                ["price", 6],
+            )
         ]
         return g
 
@@ -45,31 +47,36 @@ class PaymentRequestForm(GenModelForm):
     class Meta:
         model = PaymentRequest
         exclude = [
-            'locator',
-            'ref',
-            'order_ref',
-            'user',
-            'protocol',
-            'real',
-            'error',
-            'error_txt',
-            'cancelled',
-            'request',
-            'answer']
+            "user",
+            "locator",
+            "ref",
+            "order_ref",
+            "user",
+            "protocol",
+            "real",
+            "error",
+            "error_txt",
+            "cancelled",
+            "request",
+            "answer",
+            "feedback",
+        ]
         autofill = {
-            'platform': ['select', 3, 'CDNX_payments_platforms'],
+            "platform": ["select", 3, "CDNX_payments_platforms"],
         }
 
     def __groups__(self):
         g = [
-            (_('Details'), 12,
-                ['total', 6],
-                ['currency', 6],
-                ['platform', 6],
-                ['reverse', 6],
-                ['order', 6],
-                ['notes', 6],
-                ['feedback', 12],)
+            (
+                _("Details"),
+                12,
+                ["total", 6],
+                ["currency", 6],
+                ["platform", 6],
+                ["reverse", 6],
+                ["order", 6],
+                ["notes", 6],
+            )
         ]
         return g
 
@@ -78,25 +85,31 @@ class PaymentRequestUpdateForm(GenModelForm):
     class Meta:
         model = PaymentRequest
         exclude = [
-            'total',
-            'ref',
-            'platform',
-            'locator',
-            'order',
-            'order_ref',
-            'reverse',
-            'currency',
-            'protocol',
-            'real',
-            'error',
-            'error_txt',
-            'cancelled',
-            'request',
-            'answer']
+            "user",
+            "total",
+            "ref",
+            "platform",
+            "locator",
+            "order",
+            "order_ref",
+            "reverse",
+            "currency",
+            "protocol",
+            "real",
+            "error",
+            "error_txt",
+            "cancelled",
+            "request",
+            "answer",
+            "feedback",
+        ]
 
     def __groups__(self):
         g = [
-            (_('Details'), 12,
-                ['notes', 12],)
+            (
+                _("Details"),
+                12,
+                ["notes", 12],
+            )
         ]
         return g

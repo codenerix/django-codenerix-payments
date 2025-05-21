@@ -18,24 +18,26 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+# type: ignore
+
 import sys
+import traceback
 import json
-import paypalrestsdk
-import importlib
+import tempfile
+import paypalrestsdk  # type: ignore
 import hashlib
 import base64
 import time
 import datetime
 import requests
 import math
-import traceback
-from decimal import Decimal
+import importlib
+from decimal import Decimal, InvalidOperation
 
 from Crypto.Cipher import DES3
 from Crypto.Hash import HMAC, SHA256
 
 # from suds.client import Client as SOAPClient
-import jsonfield
 
 from django.db import models
 from django.db.models import Q
@@ -46,18 +48,32 @@ from django.utils import timezone
 from django.utils.encoding import smart_str
 from django.core.validators import MaxValueValidator
 
-from codenerix.middleware import get_current_user
-from codenerix.models import CodenerixModel
-from codenerix.helpers import CodenerixEncoder, get_client_ip, JSONEncoder_newdefault
+from codenerix.middleware import get_current_user  # type: ignore
+from codenerix.models import CodenerixModel  # type: ignore
+from codenerix.helpers import (  # type: ignore
+    CodenerixEncoder,
+    get_client_ip,
+    JSONEncoder_newdefault,
+)
 
-from .sdk_yeepay.sign_rsa.authorization import sign_rsa  # get_query_str,
-from .sdk_yeepay.sign_rsa.yop_security_utils import verify_rsa, decrypt
+# from .sdk_yeepay.sign_rsa.authorization import sign_rsa  # get_query_str,
+# from .sdk_yeepay.sign_rsa.yop_security_utils import (  # type: ignore
+#     verify_rsa,
+#     decrypt,
+# )
+from yop_python_sdk.client.yopclient import YopClient
+from yop_python_sdk.client.yop_client_config import YopClientConfig
+from yop_python_sdk.security.encryptor.rsaencryptor import RsaEncryptor
 
 # Set new JSON Encoder default
 JSONEncoder_newdefault()
 
-CURRENCY_MAX_DIGITS = getattr(settings, "CDNX_INVOICING_CURRENCY_MAX_DIGITS", 10)
-CURRENCY_DECIMAL_PLACES = getattr(settings, "CDNX_INVOICING_CURRENCY_DECIMAL_PLACES", 4)
+CURRENCY_MAX_DIGITS = getattr(
+    settings, "CDNX_INVOICING_CURRENCY_MAX_DIGITS", 10
+)
+CURRENCY_DECIMAL_PLACES = getattr(
+    settings, "CDNX_INVOICING_CURRENCY_DECIMAL_PLACES", 4
+)
 
 PAYMENT_PROTOCOL_CHOICES = (
     ("paypal", _("Paypal")),
@@ -93,10 +109,10 @@ def redsys_signature(authkey, order, paramsb64, recode=False):
     iv = b"\0\0\0\0\0\0\0\0"
     k = DES3.new(authkey, DES3.MODE_CBC, iv)
     ceros = b"\0" * (len(order) % 8)
-    claveOp = k.encrypt((order + ceros.decode()).encode())
+    claveop = k.encrypt((order + ceros.decode()).encode())
 
     # Realizo la codificacion SHA256
-    dig = HMAC.new(claveOp, msg=paramsb64.encode(), digestmod=SHA256).digest()
+    dig = HMAC.new(claveop, msg=paramsb64.encode(), digestmod=SHA256).digest()
     signature = base64.b64encode(dig).decode()
     if recode:
         signature = signature.replace("+", "-").replace("/", "_")
@@ -106,7 +122,9 @@ def redsys_signature(authkey, order, paramsb64, recode=False):
 def redsys_error(code):
     errors = {}
     errors["0101"] = "Tarjeta Caducada."
-    errors["0102"] = "Tarjeta en excepción transitoria o bajo sospecha de fraude."
+    errors[
+        "0102"
+    ] = "Tarjeta en excepción transitoria o bajo sospecha de fraude."
     errors["0104"] = "Operación no permitida para esa tarjeta o terminal."
     errors["0106"] = "Intentos de PIN excedidos."
     errors["0116"] = "Disponible Insuficiente."
@@ -117,9 +135,10 @@ def redsys_error(code):
     errors["0184"] = "Error en la autenticación del titular."
     errors["0190"] = "Denegación sin especificar motivo."
     errors["0191"] = "Fecha de caducidad errónea."
-    errors[
-        "0202"
-    ] = "Tarjeta en excepción transitoria o bajo sospecha de fraude con retirada de tarjeta."
+    errors["0202"] = (
+        "Tarjeta en excepción transitoria o bajo sospecha de fraude "
+        "con retirada de tarjeta."
+    )
     errors["0904"] = "Comercio no registrado en FUC."
     errors["0909"] = "Error de sistema."
     errors["0912"] = "Emisor no disponible."
@@ -133,26 +152,36 @@ def redsys_error(code):
     errors[
         "9104"
     ] = "Comercio con “titular seguro” y titular sin clave de compra segura."
-    errors["9218"] = "El comercio no permite op. seguras por entrada /operaciones."
+    errors[
+        "9218"
+    ] = "El comercio no permite op. seguras por entrada /operaciones."
     errors["9253"] = "Tarjeta no cumple el check-digit."
     errors["9256"] = "El comercio no puede realizar preautorizaciones."
     errors["9257"] = "Esta tarjeta no permite operativa de preautorizaciones."
-    errors[
-        "9261"
-    ] = "Operación detenida por superar el control de restricciones en la entrada al SIS."
+    errors["9261"] = (
+        "Operación detenida por superar el control de "
+        "restricciones en la entrada al SIS."
+    )
     errors["9912"] = "Emisor no disponible."
-    errors[
-        "9913"
-    ] = "Error en la confirmación que el comercio envía al TPV Virtual (solo aplicable en la opción de sincronización SOAP)."
-    errors[
-        "9914"
-    ] = "Confirmación “KO” del comercio (solo aplicable en la opción de sincronización SOAP)."
+    errors["9913"] = (
+        "Error en la confirmación que el comercio envía al TPV Virtual "
+        "(solo aplicable en la opción de sincronización SOAP)."
+    )
+    errors["9914"] = (
+        "Confirmación “KO” del comercio (solo aplicable en la opción de "
+        "sincronización SOAP)."
+    )
     errors["9915"] = "A petición del usuario se ha cancelado el pago."
+    errors["9928"] = (
+        "Anulación de autorización en diferido realizada por "
+        "el SIS (proceso batch)."
+    )
     errors[
-        "9928"
-    ] = "Anulación de autorización en diferido realizada por el SIS (proceso batch)."
-    errors["9929"] = "Anulación de autorización en diferido realizada por el comercio."
-    errors["9997"] = "Se está procesando otra transacción en SIS con la misma tarjeta."
+        "9929"
+    ] = "Anulación de autorización en diferido realizada por el comercio."
+    errors[
+        "9997"
+    ] = "Se está procesando otra transacción en SIS con la misma tarjeta."
     errors["9998"] = "Operación en proceso de solicitud de datos de tarjeta."
     errors["9999"] = "Operación que ha sido redirigida al emisor a autenticar."
     errors["SIS0007"] = "Error al desmontar el XML de entrada."
@@ -170,43 +199,61 @@ def redsys_error(code):
     errors["SIS0021"] = "Error la Ds_Merchant_MerchantSignature viene vacía."
     errors["SIS0022"] = "Error de formato en Ds_Merchant_TransactionType."
     errors["SIS0023"] = "Error Ds_Merchant_TransactionType desconocido."
-    errors["SIS0024"] = "Error Ds_Merchant_ConsumerLanguage tiene mas de 3 posiciones."
+    errors[
+        "SIS0024"
+    ] = "Error Ds_Merchant_ConsumerLanguage tiene mas de 3 posiciones."
     errors["SIS0025"] = "Error de formato en Ds_Merchant_ConsumerLanguage."
     errors["SIS0026"] = "Error No existe el comercio / terminal enviado."
-    errors[
-        "SIS0027"
-    ] = "Error Moneda enviada por el comercio es diferente a la que tiene asignada para ese terminal."
+    errors["SIS0027"] = (
+        "Error Moneda enviada por el comercio es diferente a la que "
+        "tiene asignada para ese terminal."
+    )
     errors["SIS0028"] = "Error Comercio / terminal está dado de baja."
-    errors[
-        "SIS0030"
-    ] = "Error en un pago con tarjeta ha llegado un tipo de operación no valido."
+    errors["SIS0030"] = (
+        "Error en un pago con tarjeta ha llegado un tipo de "
+        "operación no valido."
+    )
     errors["SIS0031"] = "Método de pago no definido."
-    errors[
-        "SIS0033"
-    ] = "Error en un pago con móvil ha llegado un tipo de operación que no es ni pago ni preautorización."
+    errors["SIS0033"] = (
+        "Error en un pago con móvil ha llegado un tipo de operación que no es "
+        "ni pago ni preautorización."
+    )
     errors["SIS0034"] = "Error de acceso a la Base de Datos."
     errors["SIS0037"] = "El número de teléfono no es válido."
     errors["SIS0038"] = "Error en java."
     errors[
         "SIS0040"
     ] = "Error el comercio / terminal no tiene ningún método de pago asignado."
-    errors["SIS0041"] = "Error en el cálculo de la firma de datos del comercio."
+    errors[
+        "SIS0041"
+    ] = "Error en el cálculo de la firma de datos del comercio."
     errors["SIS0042"] = "La firma enviada no es correcta."
     errors["SIS0043"] = "Error al realizar la notificación on-line."
     errors["SIS0046"] = "El BIN de la tarjeta no está dado de alta."
     errors["SIS0051"] = "Error número de pedido repetido."
-    errors["SIS0054"] = "Error no existe operación sobre la que realizar la devolución."
-    errors["SIS0055"] = "Error no existe más de un pago con el mismo número de pedido."
+    errors[
+        "SIS0054"
+    ] = "Error no existe operación sobre la que realizar la devolución."
+    errors[
+        "SIS0055"
+    ] = "Error no existe más de un pago con el mismo número de pedido."
     errors[
         "SIS0056"
     ] = "La operación sobre la que se desea devolver no está autorizada."
     errors["SIS0057"] = "El importe a devolver supera el permitido."
-    errors["SIS0058"] = "Inconsistencia de datos, en la validación de una confirmación."
-    errors["SIS0059"] = "Error no existe operación sobre la que realizar la devolución."
-    errors["SIS0060"] = "Ya existe una confirmación asociada a la preautorización."
     errors[
-        "SIS0061"
-    ] = "La preautorización sobre la que se desea confirmar no está autorizada."
+        "SIS0058"
+    ] = "Inconsistencia de datos, en la validación de una confirmación."
+    errors[
+        "SIS0059"
+    ] = "Error no existe operación sobre la que realizar la devolución."
+    errors[
+        "SIS0060"
+    ] = "Ya existe una confirmación asociada a la preautorización."
+    errors["SIS0061"] = (
+        "La preautorización sobre la que se desea confirmar no está "
+        "autorizada."
+    )
     errors["SIS0062"] = "El importe a confirmar supera el permitido."
     errors["SIS0063"] = "Error. Número de tarjeta no disponible."
     errors[
@@ -224,101 +271,144 @@ def redsys_error(code):
     errors[
         "SIS0075"
     ] = "Error el Ds_Merchant_Order tiene menos de 4 posiciones o más de 12."
-    errors[
-        "SIS0076"
-    ] = "Error el Ds_Merchant_Order no tiene las cuatro primeras posiciones numéricas."
+    errors["SIS0076"] = (
+        "Error el Ds_Merchant_Order no tiene las cuatro primeras posiciones "
+        "numéricas."
+    )
     errors["SIS0078"] = "Método de pago no disponible."
     errors["SIS0079"] = "Error al realizar el pago con tarjeta."
-    errors["SIS0081"] = "La sesión es nueva, se han perdido los datos almacenados."
+    errors[
+        "SIS0081"
+    ] = "La sesión es nueva, se han perdido los datos almacenados."
     errors["SIS0084"] = "El valor de Ds_Merchant_Conciliation es nulo."
     errors["SIS0085"] = "El valor de Ds_Merchant_Conciliation no es numérico."
-    errors["SIS0086"] = "El valor de Ds_Merchant_Conciliation no ocupa 6 posiciones."
-    errors["SIS0089"] = "El valor de Ds_Merchant_ExpiryDate no ocupa 4 posiciones."
+    errors[
+        "SIS0086"
+    ] = "El valor de Ds_Merchant_Conciliation no ocupa 6 posiciones."
+    errors[
+        "SIS0089"
+    ] = "El valor de Ds_Merchant_ExpiryDate no ocupa 4 posiciones."
     errors["SIS0092"] = "El valor de Ds_Merchant_ExpiryDate es nulo."
     errors["SIS0093"] = "Tarjeta no encontrada en la tabla de rangos."
     errors["SIS0094"] = "La tarjeta no fue autenticada como 3D Secure."
     errors["SIS0097"] = "Valor del campo Ds_Merchant_CComercio no válido."
     errors["SIS0098"] = "Valor del campo Ds_Merchant_CVentana no válido."
-    errors[
-        "SIS0112"
-    ] = "Error. El tipo de transacción especificado en Ds_Merchant_Transaction_Type no esta permitido."
+    errors["SIS0112"] = (
+        "Error. El tipo de transacción especificado "
+        "en Ds_Merchant_Transaction_Type no esta permitido."
+    )
     errors["SIS0113"] = "Excepción producida en el servlet de operaciones."
     errors["SIS0114"] = "Error, se ha llamado con un GET en lugar de un POST."
     errors[
         "SIS0115"
     ] = "Error no existe operación sobre la que realizar el pago de la cuota."
-    errors[
-        "SIS0116"
-    ] = "La operación sobre la que se desea pagar una cuota no es una operación válida."
-    errors[
-        "SIS0117"
-    ] = "La operación sobre la que se desea pagar una cuota no está autorizada."
+    errors["SIS0116"] = (
+        "La operación sobre la que se desea pagar una cuota no es "
+        "una operación válida."
+    )
+    errors["SIS0117"] = (
+        "La operación sobre la que se desea pagar una "
+        "cuota no está autorizada."
+    )
     errors["SIS0118"] = "Se ha excedido el importe total de las cuotas."
     errors["SIS0119"] = "Valor del campo Ds_Merchant_DateFrecuency no válido."
-    errors["SIS0120"] = "Valor del campo Ds_Merchant_CargeExpiryDate no válido."
+    errors[
+        "SIS0120"
+    ] = "Valor del campo Ds_Merchant_CargeExpiryDate no válido."
     errors["SIS0121"] = "Valor del campo Ds_Merchant_SumTotal no válido."
+    errors["SIS0122"] = (
+        "Valor del campo Ds_merchant_DateFrecuency o "
+        "Ds_Merchant_SumTotal tiene formato incorrecto."
+    )
     errors[
-        "SIS0122"
-    ] = "Valor del campo Ds_merchant_DateFrecuency o Ds_Merchant_SumTotal tiene formato incorrecto."
-    errors["SIS0123"] = "Se ha excedido la fecha tope para realizar transacciones."
-    errors[
-        "SIS0124"
-    ] = "No ha transcurrido la frecuencia mínima en un pago recurrente sucesivo."
-    errors[
-        "SIS0132"
-    ] = "La fecha de Confirmación de Autorización no puede superar en más de 7 días a la de Preautorización."
-    errors[
-        "SIS0133"
-    ] = "La fecha de Confirmación de Autenticación no puede superar en mas de 45 días a la de Autenticación Previa."
+        "SIS0123"
+    ] = "Se ha excedido la fecha tope para realizar transacciones."
+    errors["SIS0124"] = (
+        "No ha transcurrido la frecuencia mínima en un pago "
+        "recurrente sucesivo."
+    )
+    errors["SIS0132"] = (
+        "La fecha de Confirmación de Autorización no puede superar en "
+        "más de 7 días a la de Preautorización."
+    )
+    errors["SIS0133"] = (
+        "La fecha de Confirmación de Autenticación no puede superar en "
+        "mas de 45 días a la de Autenticación Previa."
+    )
     errors["SIS0139"] = "Error el pago recurrente inicial está duplicado."
     errors["SIS0142"] = "Tiempo excedido para el pago."
+    errors["SIS0197"] = (
+        "Error al obtener los datos de cesta de la compra en operación "
+        "tipo pasarela."
+    )
     errors[
-        "SIS0197"
-    ] = "Error al obtener los datos de cesta de la compra en operación tipo pasarela."
-    errors["SIS0198"] = "Error el importe supera el límite permitido para el comercio."
-    errors[
-        "SIS0199"
-    ] = "Error el número de operaciones supera el límite permitido para el comercio."
-    errors[
-        "SIS0200"
-    ] = "Error el importe acumulado supera el límite permitido para el comercio."
+        "SIS0198"
+    ] = "Error el importe supera el límite permitido para el comercio."
+    errors["SIS0199"] = (
+        "Error el número de operaciones supera el límite permitido para "
+        "el comercio."
+    )
+    errors["SIS0200"] = (
+        "Error el importe acumulado supera el límite permitido para "
+        "el comercio."
+    )
     errors["SIS0214"] = "El comercio no admite devoluciones."
     errors["SIS0216"] = "Error Ds_Merchant_CVV2 tiene mas de 3/4 posiciones."
     errors["SIS0217"] = "Error de formato en Ds_Merchant_CVV2."
-    errors[
-        "SIS0218"
-    ] = "El comercio no permite operaciones seguras por la entrada /operaciones."
-    errors[
-        "SIS0219"
-    ] = "Error el número de operaciones de la tarjeta supera el límite permitido para el comercio."
-    errors[
-        "SIS0220"
-    ] = "Error el importe acumulado de la tarjeta supera el límite permitido para el comercio."
+    errors["SIS0218"] = (
+        "El comercio no permite operaciones seguras por "
+        "la entrada /operaciones."
+    )
+    errors["SIS0219"] = (
+        "Error el número de operaciones de la tarjeta supera el límite "
+        "permitido para el comercio."
+    )
+    errors["SIS0220"] = (
+        "Error el importe acumulado de la tarjeta supera el límite "
+        "permitido para el comercio."
+    )
     errors["SIS0221"] = "Error el CVV2 es obligatorio."
-    errors["SIS0222"] = "Ya existe una anulación asociada a la preautorización."
-    errors["SIS0223"] = "La preautorización que se desea anular no está autorizada."
+    errors[
+        "SIS0222"
+    ] = "Ya existe una anulación asociada a la preautorización."
+    errors[
+        "SIS0223"
+    ] = "La preautorización que se desea anular no está autorizada."
     errors[
         "SIS0224"
     ] = "El comercio no permite anulaciones por no tener firma ampliada."
-    errors["SIS0225"] = "Error no existe operación sobre la que realizar la anulación."
-    errors["SIS0226"] = "Inconsistencia de datos, en la validación de una anulación."
+    errors[
+        "SIS0225"
+    ] = "Error no existe operación sobre la que realizar la anulación."
+    errors[
+        "SIS0226"
+    ] = "Inconsistencia de datos, en la validación de una anulación."
     errors["SIS0227"] = "Valor del campo Ds_Merchan_TransactionDate no válido."
     errors["SIS0229"] = "No existe el código de pago aplazado solicitado."
     errors["SIS0252"] = "El comercio no permite el envío de tarjeta."
     errors["SIS0253"] = "La tarjeta no cumple el check-digit."
-    errors[
-        "SIS0254"
-    ] = "El número de operaciones de la IP supera el límite permitido por el comercio."
-    errors[
-        "SIS0255"
-    ] = "El importe acumulado por la IP supera el límite permitido por el comercio."
+    errors["SIS0254"] = (
+        "El número de operaciones de la IP supera el límite permitido "
+        "por el comercio."
+    )
+    errors["SIS0255"] = (
+        "El importe acumulado por la IP supera el límite permitido "
+        "por el comercio."
+    )
     errors["SIS0256"] = "El comercio no puede realizar preautorizaciones."
-    errors["SIS0257"] = "Esta tarjeta no permite operativa de preautorizaciones."
-    errors["SIS0258"] = "Inconsistencia de datos, en la validación de una confirmación."
     errors[
-        "SIS0261"
-    ] = "Operación detenida por superar el control de restricciones en la entrada al SIS."
-    errors["SIS0270"] = "El comercio no puede realizar autorizaciones en diferido."
+        "SIS0257"
+    ] = "Esta tarjeta no permite operativa de preautorizaciones."
+    errors[
+        "SIS0258"
+    ] = "Inconsistencia de datos, en la validación de una confirmación."
+    errors["SIS0261"] = (
+        "Operación detenida por superar el control de restricciones "
+        "en la entrada al SIS."
+    )
+    errors[
+        "SIS0270"
+    ] = "El comercio no puede realizar autorizaciones en diferido."
     errors[
         "SIS0274"
     ] = "Tipo de operación desconocida o no permitida por esta entrada al SIS."
@@ -328,28 +418,36 @@ def redsys_error(code):
     errors[
         "SIS0319"
     ] = "El comercio no pertenece al grupo especificado en Ds_Merchant_Group."
-    errors[
-        "SIS0321"
-    ] = "La referencia indicada en Ds_Merchant_Identifier no está asociada al comercio."
+    errors["SIS0321"] = (
+        "La referencia indicada en Ds_Merchant_Identifier no está "
+        "asociada al comercio."
+    )
     errors["SIS0322"] = "Error de formato en Ds_Merchant_Group."
+    errors["SIS0325"] = (
+        "Se ha pedido no mostrar pantallas pero no se ha enviado "
+        "ninguna referencia de tarjeta."
+    )
+    errors["SIS0334"] = (
+        "Superado los límites de compra con esta tarjeta o IP (ver "
+        "parámetros en Redsys). [Velocity checks]"
+    )
+    errors["SIS0429"] = (
+        "Error en la versión enviada por el comercio en el parámetro "
+        "Ds_SignatureVersion"
+    )
     errors[
-        "SIS0325"
-    ] = "Se ha pedido no mostrar pantallas pero no se ha enviado ninguna referencia de tarjeta."
-    errors[
-        "SIS0334"
-    ] = "Superado los límites de compra con esta tarjeta o IP (ver parámetros en Redsys). [Velocity checks]"
-    errors[
-        "SIS0429"
-    ] = "Error en la versión enviada por el comercio en el parámetro Ds_SignatureVersion"
-    errors["SIS0430"] = "Error al decodificar el parámetro Ds_MerchantParameters"
-    errors[
-        "SIS0431"
-    ] = "Error del objeto JSON que se envía codificado en el parámetro Ds_MerchantParameters"
+        "SIS0430"
+    ] = "Error al decodificar el parámetro Ds_MerchantParameters"
+    errors["SIS0431"] = (
+        "Error del objeto JSON que se envía codificado en el parámetro "
+        "Ds_MerchantParameters"
+    )
     errors["SIS0432"] = "Error FUC del comercio erróneo"
     errors["SIS0433"] = "Error Terminal del comercio erróneo"
-    errors[
-        "SIS0434"
-    ] = "Error ausencia de número de pedido en la operación enviada por el comercio"
+    errors["SIS0434"] = (
+        "Error ausencia de número de pedido en la operación "
+        "enviada por el comercio"
+    )
     errors["SIS0435"] = "Error en el cálculo de la firma"
     code2 = "SIS{}".format(code)
     code3 = code.replace("SIS", "")
@@ -527,10 +625,13 @@ class PaymentRequest(CodenerixModel):
     platform: selected platform for payment to happen (it is linked to request/answer)
     protocol: selected protocol for payment to happen (it is linked to request/answer)
     request/answer: usable structure for the selected payment system
-    """
+    """  # noqa: E501
 
     user = models.ForeignKey(
-        settings.AUTH_USER_MODEL, on_delete=models.CASCADE, blank=True, null=True
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        blank=True,
+        null=True,
     )
     locator = models.CharField(
         _("Locator"), max_length=40, unique=True, blank=False, null=False
@@ -547,7 +648,13 @@ class PaymentRequest(CodenerixModel):
     order_ref = models.CharField(
         _("Order Reference"), max_length=8, blank=False, null=False
     )
-    reverse = models.CharField(_("Reverse"), max_length=64, blank=False, null=False)
+    reverse = models.CharField(
+        _("Reverse"),
+        max_length=64,
+        blank=False,
+        null=False,
+        default="payments_reverse",
+    )
     currency = models.ForeignKey(
         Currency,
         blank=False,
@@ -555,7 +662,9 @@ class PaymentRequest(CodenerixModel):
         related_name="payments",
         on_delete=models.CASCADE,
     )
-    platform = models.CharField(_("Platform"), max_length=20, blank=False, null=False)
+    platform = models.CharField(
+        _("Platform"), max_length=20, blank=False, null=False
+    )
     protocol = models.CharField(
         _("Protocol"),
         choices=PAYMENT_PROTOCOL_CHOICES,
@@ -563,8 +672,12 @@ class PaymentRequest(CodenerixModel):
         blank=False,
         null=False,
     )
-    real = models.BooleanField(_("Real"), blank=False, null=False, default=False)
-    error = models.BooleanField(_("Error"), blank=False, null=False, default=False)
+    real = models.BooleanField(
+        _("Real"), blank=False, null=False, default=False
+    )
+    error = models.BooleanField(
+        _("Error"), blank=False, null=False, default=False
+    )
     error_txt = models.TextField(_("Error Text"), blank=True, null=True)
     cancelled = models.BooleanField(
         _("Cancelled"), blank=False, null=False, default=False
@@ -588,8 +701,10 @@ class PaymentRequest(CodenerixModel):
     answer_date = models.DateTimeField(
         _("Answer date"), editable=False, blank=True, null=True
     )
-    ip = models.GenericIPAddressField(_("IP"), blank=False, null=False, editable=False)
-    feedback = jsonfield.JSONField(_("Feedback"), blank=True, null=True)
+    ip = models.GenericIPAddressField(
+        _("IP"), blank=False, null=False, editable=False
+    )
+    feedback = models.JSONField(_("Feedback"), blank=True, null=True)
 
     def __unicode__(self):
         return "PayReq({0}):{1}_{2}:{3}|{4}:{5}[{6}]".format(
@@ -627,12 +742,12 @@ class PaymentRequest(CodenerixModel):
             fields.append(("get_approval_list", _("Paid"), 100))
         return fields
 
-    def __searchF__(self, info):
+    def __searchF__(self, info):  # noqa: N802
         def currencies():
-            l = []
+            curs = []
             for currency in Currency.objects.all():
-                l.append((currency.pk, currency.name))
-            return l
+                curs.append((currency.pk, currency.name))
+            return curs
 
         def kindpaidfilter(kindfilter):
             if kindfilter == "Y":
@@ -643,7 +758,8 @@ class PaymentRequest(CodenerixModel):
                 )
             elif kindfilter == "N":
                 return Q(
-                    Q(paymentanswers__ref__isnull=True) | Q(paymentanswers__error=True),
+                    Q(paymentanswers__ref__isnull=True)
+                    | Q(paymentanswers__error=True),
                     cancelled=False,
                 )
             elif kindfilter == "C":
@@ -663,14 +779,22 @@ class PaymentRequest(CodenerixModel):
             lambda x: Q(paymentanswers__isnull=not x),
             [(True, _("Yes")), (False, _("No"))],
         )
-        tf["order"] = (_("Order Number"), lambda x: Q(order__icontains=x), "input")
+        tf["order"] = (
+            _("Order Number"),
+            lambda x: Q(order__icontains=x),
+            "input",
+        )
         tf["order_ref"] = (
             _("Order Reference"),
             lambda x: Q(order_ref__icontains=x),
             "input",
         )
         tf["total"] = (_("Total"), lambda x: Q(total__icontains=x), "input")
-        tf["currency"] = (_("Currency"), lambda x: Q(currency__pk=x), currencies())
+        tf["currency"] = (
+            _("Currency"),
+            lambda x: Q(currency__pk=x),
+            currencies(),
+        )
         tf["ip"] = (_("IP"), lambda x: Q(ip__icontains=x), "input")
         if getattr(settings, "CDNX_PAYMENTS_REQUEST_PAY", False):
             tf["get_approval_list"] = (
@@ -680,7 +804,7 @@ class PaymentRequest(CodenerixModel):
             )
         return tf
 
-    def __limitQ__(self, info):
+    def __limitQ__(self, info):  # noqa: N802
         limit = {}
         # If user is not a superuser, the shown records depends on the profile
         if not info.request.user.is_superuser:
@@ -689,7 +813,9 @@ class PaymentRequest(CodenerixModel):
         return limit
 
     def is_paid(self):
-        return bool(self.paymentanswers.filter(ref__isnull=False, error=False).first())
+        return bool(
+            self.paymentanswers.filter(ref__isnull=False, error=False).first()
+        )
 
     def get_approval_list(self):
         try:
@@ -720,7 +846,10 @@ class PaymentRequest(CodenerixModel):
                     )
             else:
                 raise PaymentError(
-                    2, _("Unknown platform '{platform}'").format(platform=self.platform)
+                    2,
+                    _("Unknown platform '{platform}'").format(
+                        platform=self.platform
+                    ),
                 )
         else:
             # No approval information available
@@ -744,10 +873,11 @@ class PaymentRequest(CodenerixModel):
         return approval
 
     def __get_approval_redsys(self, meta, config):
+
         # Initialize
         approval = {}
+
         # Get dict
-        # answer = json.loads(self.answer) # It wasn't being used !!! <--- DEPRECATED???
         params = {}
 
         # AMOUNT: 12 Numeric - Last 2 positions are decimals except for YENS
@@ -759,7 +889,7 @@ class PaymentRequest(CodenerixModel):
             raise PaymentError(
                 11,
                 _(
-                    "Amount doesn't match to the payment request: stored={stored} - protocol={protocol}"
+                    "Amount doesn't match to the payment request: stored={stored} - protocol={protocol}"  # noqa: E501
                 ).format(stored=self.total, protocol=float(amount) / 100),
             )
 
@@ -781,7 +911,8 @@ class PaymentRequest(CodenerixModel):
             raise PaymentError(
                 1,
                 _(
-                    "Unknown currency for this protocol '{currency}' (available are: EUR, USD, GBP, JPY, CHF & CAD)"
+                    "Unknown currency for this protocol '{currency}' "
+                    "(available are: EUR, USD, GBP, JPY, CHF & CAD)"
                 ).format(currency=curcode),
             )
         params["DS_MERCHANT_CURRENCY"] = curcode
@@ -791,7 +922,9 @@ class PaymentRequest(CodenerixModel):
         url = meta.get("url", "")  # URL when not using SSL
         urlssl = meta.get("urlssl", "")  # URL when using SSL
         ssl = meta.get("ssl", True)  # If the system can use SSL connections
-        sslvalid = meta.get("sslvalid", True)  # If the certificate is valid officially
+        sslvalid = meta.get(
+            "sslvalid", True
+        )  # If the certificate is valid officially
 
         # Confirm/Cancel
         if ssl:
@@ -809,7 +942,8 @@ class PaymentRequest(CodenerixModel):
         code = config.get("merchant_code", "")
         authkey = base64.b64decode(config.get("auth_key", ""))
         success_url = urlsuccess + reverse(
-            "payment_url", kwargs={"action": "success", "locator": self.locator}
+            "payment_url",
+            kwargs={"action": "success", "locator": self.locator},
         )
 
         # Get reverse
@@ -822,50 +956,81 @@ class PaymentRequest(CodenerixModel):
             cancel_url.replace("{locator}", self.locator)
         else:
             return_url = urllink + reverse(
-                "payment_url", kwargs={"action": "confirm", "locator": self.locator}
+                "payment_url",
+                kwargs={"action": "confirm", "locator": self.locator},
             )
             cancel_url = urllink + reverse(
-                "payment_url", kwargs={"action": "cancel", "locator": self.locator}
+                "payment_url",
+                kwargs={"action": "cancel", "locator": self.locator},
             )
 
         # DETAILS 1
         params["DS_MERCHANT_ORDER"] = self.order_ref
-        # #fields['Ds_Merchant_Titular'] = 'TIT'                   # TITULAR: Max 60 Alfa Numeric
-        # #fields['Ds_Merchant_ProductDescription'] = 'DES'        # PRODUCT DESCRIPTION: Max 125 Alfa Numeric
+
+        # TITULAR: Max 60 Alfa Numeric
+        # #fields['Ds_Merchant_Titular'] = 'TIT'
+
+        # PRODUCT DESCRIPTION: Max 125 Alfa Numeric
+        # #fields['Ds_Merchant_ProductDescription'] = 'DES'
+
         params["DS_MERCHANT_MERCHANTCODE"] = code  # SELF CODE: 9 Numeric
         params[
             "DS_MERCHANT_MERCHANTURL"
         ] = success_url  # SELF URL BACKEND: 250 Alfa Numeric
-        params["DS_MERCHANT_URLOK"] = return_url  # SELF URL USER OK: 250 Alfa Numeric
-        params["DS_MERCHANT_URLKO"] = cancel_url  # SELF URL USER KO: 250 Alfa Numeric
-        # #fields['Ds_Merchant_MerchantName'] = name               # SELF NAME: 25 Alfa Numeric
+        params[
+            "DS_MERCHANT_URLOK"
+        ] = return_url  # SELF URL USER OK: 250 Alfa Numeric
+        params[
+            "DS_MERCHANT_URLKO"
+        ] = cancel_url  # SELF URL USER KO: 250 Alfa Numeric
+
+        # SELF NAME: 25 Alfa Numeric
+        # #fields['Ds_Merchant_MerchantName'] = name
 
         # LANGUAGE: 3 Numeric
         # lang_code = 0   # Client
         # #fields['Ds_Merchant_ConsumerLanguage'] = lang_code
 
         # DETAILS 2
-        params["DS_MERCHANT_TERMINAL"] = "1"  # TERMINAL: 3 Numeric (Fixed to 1)
-        # #fields['Ds_Merchant_MerchantData'] = 'INFO'               # SELF INFO: 1024 Alfa Numeric
+        params[
+            "DS_MERCHANT_TERMINAL"
+        ] = "1"  # TERMINAL: 3 Numeric (Fixed to 1)
+
+        # SELF INFO: 1024 Alfa Numeric
+        # #fields['Ds_Merchant_MerchantData'] = 'INFO'
+
         params[
             "DS_MERCHANT_TRANSACTIONTYPE"
         ] = "0"  # TRANSACTION TYPE: 1 Numeric (Fixed to 1 - Standard Payment)
-        # fields['Ds_Merchant_AuthorisationCode'] = ''            # AUTH CODE: 6 Numeric (OPTIONAL)
-        # #fields['Ds_Merchant_Identifier'] = 'IDENT'                # IDENTIFIER: Max 40 Alfa Numeric
-        # fields['Ds_Merchant_Group'] = ''                        # GROUP: Max 9 Numeric (OPTIONAL)
-        # fields['Ds_Merchant_DirectPayment'] = ''                # DIRECT PAYMENT: 'True' / 'false' (OPTIONAL)
-        # fields['Ds_Merchant_PayMethod'] = ''                    # METHOD: C:CARD / O:IUPAY (only for e-commerce with IUPAY support)
+
+        # AUTH CODE: 6 Numeric (OPTIONAL)
+        # fields['Ds_Merchant_AuthorisationCode'] = ''
+
+        # IDENTIFIER: Max 40 Alfa Numeric
+        # #fields['Ds_Merchant_Identifier'] = 'IDENT'
+
+        # GROUP: Max 9 Numeric (OPTIONAL)
+        # fields['Ds_Merchant_Group'] = ''
+
+        # DIRECT PAYMENT: 'True' / 'false' (OPTIONAL)
+        # fields['Ds_Merchant_DirectPayment'] = ''
+
+        # METHOD: C:CARD / O:IUPAY (only for e-commerce with IUPAY support)
+        # fields['Ds_Merchant_PayMethod'] = ''
 
         # Build the request
         paramsjson = json.dumps(params).encode()
         paramsb64 = base64.b64encode(paramsjson).decode()
         # try:
-        #    paramsb64 = ''.join(unicode(base64.encodestring(paramsjson), 'utf-8')).splitlines()
+        #    paramsb64 = ''.join(unicode(base64.encodestring(paramsjson),
+        #     'utf-8')).splitlines()
         # except NameError:
         #    paramsb64 = ''.join(base64.encodestring(paramsjson)).splitlines()
 
         # Build the signature
-        signature = redsys_signature(authkey, params["DS_MERCHANT_ORDER"], paramsb64)
+        signature = redsys_signature(
+            authkey, params["DS_MERCHANT_ORDER"], paramsb64
+        )
 
         # Prepare the form
         form = {}
@@ -873,15 +1038,23 @@ class PaymentRequest(CodenerixModel):
         form["Ds_MerchantParameters"] = paramsb64
         form["Ds_Signature"] = signature
 
-        # xml =   '<DS_MERCHANT_AMOUNT>'+params['DS_MERCHANT_AMOUNT']+'</DS_MERCHANT_AMOUNT>'
-        # xml+=   '<DS_MERCHANT_ORDER>'+params['DS_MERCHANT_ORDER']+'</DS_MERCHANT_ORDER>'
-        # xml+=   '<DS_MERCHANT_MERCHANTCODE>'+params['DS_MERCHANT_MERCHANTCODE']+'</DS_MERCHANT_MERCHANTCODE>'
-        # xml+=   '<DS_MERCHANT_CURRENCY>'+params['DS_MERCHANT_CURRENCY']+'</DS_MERCHANT_CURRENCY>'
+        # xml =   '<DS_MERCHANT_AMOUNT>'+params['DS_MERCHANT_AMOUNT']+
+        #               '</DS_MERCHANT_AMOUNT>'
+        # xml+=   '<DS_MERCHANT_ORDER>'+params['DS_MERCHANT_ORDER']+
+        #               '</DS_MERCHANT_ORDER>'
+        # xml+=   '<DS_MERCHANT_MERCHANTCODE>'
+        #               +params['DS_MERCHANT_MERCHANTCODE']+'</DS_MERCHANT_MERCHANTCODE>'
+        # xml+=   '<DS_MERCHANT_CURRENCY>'+params['DS_MERCHANT_CURRENCY']+
+        #           '</DS_MERCHANT_CURRENCY>'
         # xml+=   '<DS_MERCHANT_PAN>'+card['number']+'</DS_MERCHANT_PAN>'
         # xml+=   '<DS_MERCHANT_CVV2>'+card['ccv2']+'</DS_MERCHANT_CVV2>'
-        # xml+=   '<DS_MERCHANT_TRANSACTIONTYPE>'+params['DS_MERCHANT_TRANSACTIONTYPE']+'</DS_MERCHANT_TRANSACTIONTYPE>'
-        # xml+=   '<DS_MERCHANT_TERMINAL>'+params['DS_MERCHANT_TERMINAL']+'</DS_MERCHANT_TERMINAL>'
-        # xml+=   '<DS_MERCHANT_EXPIRYDATE>'+card['expiry']['year']+card['expiry']['month']+'</DS_MERCHANT_EXPIRYDATE>'
+        # xml+=   '<DS_MERCHANT_TRANSACTIONTYPE>'+
+        #               params['DS_MERCHANT_TRANSACTIONTYPE']+
+        #               '</DS_MERCHANT_TRANSACTIONTYPE>'
+        # xml+=   '<DS_MERCHANT_TERMINAL>'+params['DS_MERCHANT_TERMINAL']+
+        #               '</DS_MERCHANT_TERMINAL>'
+        # xml+=   '<DS_MERCHANT_EXPIRYDATE>'+card['expiry']['year']+
+        #           card['expiry']['month']+'</DS_MERCHANT_EXPIRYDATE>'
         # Build the signature
         # iv = b'\0\0\0\0\0\0\0\0'
         # k = DES3.new(authkey, DES3.MODE_CBC, iv)
@@ -897,7 +1070,8 @@ class PaymentRequest(CodenerixModel):
         # finalxml+=    '<DATOSENTRADA>'
         # finalxml+=        xml
         # finalxml+=    '</DATOSENTRADA>'
-        # finalxml+=    '<DS_SIGNATUREVERSION>HMAC_SHA256_V1</DS_SIGNATUREVERSION>'
+        # finalxml+=    '<DS_SIGNATUREVERSION>HMAC_SHA256_V1'
+        #                   '</DS_SIGNATUREVERSION>'
         # finalxml+=    '<DS_SIGNATURE>'
         # finalxml+=        signature
         # finalxml+=    '</DS_SIGNATURE>'
@@ -924,127 +1098,35 @@ class PaymentRequest(CodenerixModel):
         return approval
 
     def __get_approval_yeepay(self, meta, config):
+        """
+        https://open.yeepay.com/docs/apis/INDUSTRY_SOLUTION/GENERAL/bzshsfk/shouyintai/options__rest__v1.0__cashier__unified__order
+
+        SUCESS:
+        {
+            'result': {
+                'code': '00000',
+                'message': 'ABC',
+                'uniqueOrderNo': '123',
+                'cashierUrl': 'https://cash.yeepay.com/cashier/uc?token=123&merchantNo=123'
+            }
+        }
+
+        ERROR:
+        {
+            'result': {
+                'code': '00201',
+                'message': 'ABC'
+            }
+        }
+
+        """  # noqa: E501
 
         # Initialize
         approval = {}
-
-        # Prepare configuration
-        url = meta.get("url", "")
-        success_url = url + reverse(
-            "payment_url", kwargs={"action": "success", "locator": self.locator}
-        )
-
-        # Get reverse
-        if self.reverse and self.reverse[:7] in ["http://", "https:/"]:
-            return_url = self.reverse.replace("{action}", "confirm").replace(
-                "{locator}", self.locator
-            )
-        else:
-            return_url = url + reverse(
-                "payment_url", kwargs={"action": "confirm", "locator": self.locator}
-            )
-
-        # Parámetros involucrados en la firma.
-        data = {}
-        data["amount"] = self.total
-        data["accountWay"] = "COMMON"
-        data["accountType"] = "REAL_TIME"
-        data["splitInfo"] = ""
-        data["goodsName"] = self.notes
-        data["timeoutExpress"] = 30
-        data["customerNo"] = config.get("customerNo", "")
-        data["customerRequestNo"] = self.order_ref
-        data["frontUrl"] = return_url
-        data["directPayType"] = ""
-        data["userNo"] = ""
-        data["userType"] = ""
-        data["ext"] = ""
-        data["extendMap"] = ""
-        data["terminalNo"] = ""
-
-        # Convertir los parámetros a la forma de k = v costura.
-        # IMPORTANTE MANTENER EL ORDEN
-        str1 = ""
-        str1 = "{}{}={}&".format(str1, "amount", data["amount"])
-        str1 = "{}{}={}&".format(str1, "accountWay", data["accountWay"])
-        str1 = "{}{}={}&".format(str1, "accountType", data["accountType"])
-        str1 = "{}{}={}&".format(str1, "splitInfo", data["splitInfo"])
-        str1 = "{}{}={}&".format(str1, "goodsName", data["goodsName"])
-        str1 = "{}{}={}&".format(str1, "timeoutExpress", data["timeoutExpress"])
-        str1 = "{}{}={}&".format(str1, "customerNo", data["customerNo"])
-        str1 = "{}{}={}&".format(str1, "customerRequestNo", data["customerRequestNo"])
-        str1 = "{}{}={}&".format(str1, "frontUrl", data["frontUrl"])
-        str1 = "{}{}={}&".format(str1, "directPayType", data["directPayType"])
-        str1 = "{}{}={}&".format(str1, "userNo", data["userNo"])
-        str1 = "{}{}={}&".format(str1, "userType", data["userType"])
-        str1 = "{}{}={}&".format(str1, "ext", data["ext"])
-        str1 = "{}{}={}&".format(str1, "extendMap", data["extendMap"])
-        str1 = "{}{}={}".format(str1, "terminalNo", data["terminalNo"])
-
-        # CURRENCY: 4 Numeric
-        """
-        curcode = self.currency.iso4217
-        if curcode == 'EUR':
-            curcode = '978'
-        elif curcode == 'USD':
-            curcode = '840'
-        elif curcode == 'GBP':
-            curcode = '826'
-        elif curcode == 'JPY':
-            curcode = '392'
-        elif curcode == 'CHF':
-            curcode = '756'
-        elif curcode == 'CAD':
-            curcode = '124'
-        else:
-            raise PaymentError(1, _("Unknown currency for this protocol '{currency}' (available are: EUR, USD, GBP, JPY, CHF & CAD)").format(currency=curcode))
-        """
-
-        # 不参与签名参数
-        # No participar en parámetros de firma
-        unsign = {}
-        unsign["memo"] = ""
-        unsign["appId"] = config.get("appId", "")
-        # unsign['openId'] = config.get("openId", '')
-        unsign["orderDate"] = ""
-        unsign["currency"] = ""
-        unsign["bankCode"] = config.get("bankCode", "")
-        # unsign['currency'] = curcode
-        unsign["customerBizRequestNo"] = ""
-        unsign["goodsDesc"] = ""
-        unsign["receiverCallbackUrl"] = success_url
-
-        # Generar firma
-        signstr = sign_rsa(str1, config.get("private_key", ""))
-        # 将参数转换成k=v拼接的形式
-        # Convertir los parámetros a la forma de k = v costura.
-        # str2 = get_query_str(unsign.items())
-
-        str2 = ""
-        str2 = "{}{}={}&".format(str2, "memo", unsign["memo"])
-        str2 = "{}{}={}&".format(str2, "appId", unsign["appId"])
-        # str2 = "{}{}={}&".format(str2, "openId", unsign['openId'])
-        str2 = "{}{}={}&".format(str2, "bankCode", unsign["bankCode"])
-        str2 = "{}{}={}&".format(str2, "orderDate", unsign["orderDate"])
-        # str2 = "{}{}={}".format(str2, "currency", unsign['currency'])
-        str2 = "{}{}={}&".format(str2, "currency", unsign["currency"])
-        str2 = "{}{}={}&".format(
-            str2, "customerBizRequestNo", unsign["customerBizRequestNo"]
-        )
-        str2 = "{}{}={}&".format(str2, "goodsDesc", unsign["goodsDesc"])
-        str2 = "{}{}={}".format(
-            str2, "receiverCallbackUrl", unsign["receiverCallbackUrl"]
-        )
-
-        # 拼接收银台url
-        # Gastar recibiendo url de plata
-        endpoint = config.get("endpoint", "")
-        # IMPORTANTE: la cadena $SHA256 debe estar concatenada con la firma generada
-        approval["url"] = "{}/bc-cashier/bccashier/std?{}&{}&sign={}$SHA256".format(
-            endpoint, str1, str2, signstr.decode()
-        )
-
-        # Return approval
+        # Get dict
+        answer = json.loads(self.answer)
+        # Get links inside the answer
+        approval["url"] = answer.get("result", {}).get("cashierUrl", None)
         return approval
 
     def save(self, *args, **kwargs):
@@ -1059,20 +1141,27 @@ class PaymentRequest(CodenerixModel):
             self.user = get_current_user()
 
             # Autoset locator
-            info_decode = str(time.time()) + str(datetime.datetime.now().microsecond)
+            info_decode = str(time.time()) + str(
+                datetime.datetime.now().microsecond
+            )
             self.locator = hashlib.sha1(info_decode.encode()).hexdigest()
 
             # Autoset environment
             self.real = settings.PAYMENTS.get("meta", {}).get("real", False)
             # Autoset protocol
             self.protocol = None
-            protocol = settings.PAYMENTS.get(self.platform, {}).get("protocol", None)
+            protocol = settings.PAYMENTS.get(self.platform, {}).get(
+                "protocol", None
+            )
             for (key, name) in PAYMENT_PROTOCOL_CHOICES:
                 if key == protocol:
                     self.protocol = key
             if self.protocol is None:
                 raise PaymentError(
-                    8, _("Unknown platform '{platform}'").format(platorm=self.platform)
+                    8,
+                    _("Unknown platform '{platform}'").format(
+                        platorm=self.platform
+                    ),
                 )
 
         # If no orther specified
@@ -1082,7 +1171,9 @@ class PaymentRequest(CodenerixModel):
 
         # Encode order reference
         ce = CodenerixEncoder()
-        self.order_ref = ce.numeric_encode(self.order, dic="hex36", length=8, cfill="A")
+        self.order_ref = ce.numeric_encode(
+            self.order, dic="hex36", length=8, cfill="A"
+        )
 
         # Save the model like always
         m = super(PaymentRequest, self).save(*args, **kwargs)
@@ -1100,7 +1191,8 @@ class PaymentRequest(CodenerixModel):
                     if self.protocol == "paypal":
                         self.__save_paypal(meta, config)
                     elif self.protocol in ["redsys", "redsysxml"]:
-                        # Save request as we go since we don't have to do anything else
+                        # Save request as we go since we don't have to do
+                        # anything else
                         now = timezone.now()
                         self.request = "{}"
                         self.answer = "{}"
@@ -1108,12 +1200,7 @@ class PaymentRequest(CodenerixModel):
                         self.answer_date = now
                         self.save()
                     elif self.protocol == "yeepay":
-                        now = timezone.now()
-                        self.request = "{}"
-                        self.answer = "{}"
-                        self.request_date = now
-                        self.answer_date = now
-                        self.save()
+                        self.__save_yeepay(meta, config)
                     else:
                         # Unknown protocol selected
                         raise PaymentError(
@@ -1135,15 +1222,17 @@ class PaymentRequest(CodenerixModel):
                     raise PaymentError(
                         2,
                         _(
-                            "Wrong environment: this transaction is for '{selfenviron}' environment and system is set to '{sysenviron}'"
+                            "Wrong environment: this transaction is "
+                            "for '{selfenviron}' environment and system "
+                            "is set to '{sysenviron}'"
                         ).format(selfenviron=envself, sysenviron=envsys),
                     )
             else:
                 raise PaymentError(
                     8,
-                    _("Platform '{platform}' not configured in your system").format(
-                        platform=self.platform
-                    ),
+                    _(
+                        "Platform '{platform}' not configured in your system"
+                    ).format(platform=self.platform),
                 )
 
         # Return the model we have created
@@ -1178,10 +1267,12 @@ class PaymentRequest(CodenerixModel):
             cancel_url.replace("{locator}", self.locator)
         else:
             return_url = url + reverse(
-                "payment_url", kwargs={"action": "confirm", "locator": self.locator}
+                "payment_url",
+                kwargs={"action": "confirm", "locator": self.locator},
             )
             cancel_url = url + reverse(
-                "payment_url", kwargs={"action": "cancel", "locator": self.locator}
+                "payment_url",
+                kwargs={"action": "cancel", "locator": self.locator},
             )
 
         # Configure
@@ -1246,9 +1337,116 @@ class PaymentRequest(CodenerixModel):
         self.answer_date = timezone.now()
         self.save()
 
+    def __save_yeepay(self, meta, config):
+
+        # Get details
+        api_uri = config.get("api_uri", None)
+        merchant_number = config.get("merchant_number", None)
+        endpoint = config.get("endpoint", None)
+        app_key = config.get("app_key", None)
+        public_key = config.get("public_key", None)
+        private_key = config.get("private_key", None)
+
+        # If the system can use SSL connections
+        ssl = meta.get("ssl", True)
+        if ssl:
+            # URL when using SSL
+            url = meta.get("urlssl", "")
+        else:
+            # URL when not using SSL
+            url = meta.get("url", "")
+
+        # Get Success URL
+        success_url = url + reverse(
+            "payment_url",
+            kwargs={"action": "success", "locator": self.locator},
+        )
+
+        # Get reverse
+        if self.reverse and self.reverse[:7] in ["http://", "https:/"]:
+            return_url = self.reverse
+            return_url.replace("{action}", "confirm")
+            return_url.replace("{locator}", self.locator)
+        else:
+            return_url = url + reverse(
+                "payment_url",
+                kwargs={"action": "confirm", "locator": self.locator},
+            )
+
+        # Request
+        expire = timezone.now() + datetime.timedelta(minutes=10)
+        request = {
+            "parentMerchantNo": merchant_number,
+            "merchantNo": merchant_number,
+            "orderId": self.order_ref,
+            "orderAmount": self.total,
+            "goodsName": self.notes,
+            "fundProcessType": "REAL_TIME",
+            "notifyUrl": success_url,
+            "expiredTime": expire.isoformat(),
+            "returnUrl": return_url,
+            "aggParam": '{"appId":"app_10090948273","openId":"zml_wechat","scene":{"WECHAT":"XIANXIA","ALIPAY":"XIANXIA"}}',
+        }
+
+        # Save request
+        self.request = json.dumps(request)
+        self.request_date = timezone.now()
+        self.save()
+
+        # Prepare Yeepay virtual config
+        yconfig = {
+            "app_key": app_key,
+            "server_root": endpoint,
+            "yop_public_key": [{"value": public_key}],
+            "http_client": {},
+            "isv_private_key": [{"value": private_key}],
+        }
+
+        # Prepare Yeepay client with virtual configuration
+        with tempfile.NamedTemporaryFile(delete=True) as temp_file:
+            temp_file.write(json.dumps(yconfig).encode())
+            temp_file.seek(0)
+            client = YopClient(YopClientConfig(temp_file.name))
+
+        # Create payment in Yeepay
+        try:
+            answer = client.post(api=api_uri, post_params=request)
+        except Exception as e:
+            answer = None
+            error = str(e)
+
+        # Check answer
+        if answer:
+            # Convert payment to dict
+            result = answer.get("result", None)
+            if result:
+                code = result.get("code", None)
+                if code == "00000" and "uniqueOrderNo" in result:
+                    # Get Reference
+                    self.ref = result["uniqueOrderNo"]
+                    # Build request
+                    self.answer = json.dumps(answer)
+                else:
+                    # Error code found or not uniqueOrderNo available
+                    self.error = True
+                    self.error_txt = json.dumps(answer)
+            else:
+                # No result found
+                self.error = True
+                self.error_txt = json.dumps(answer)
+
+        else:
+            # Get error and save
+            self.error = True
+            self.error_txt = json.dumps(error)
+
+        # Save everything
+        self.answer_date = timezone.now()
+        self.save()
+
     def notify(self, request, answer=None):
-        # with open("/tmp/codenerix_transaction.txt", "a") as F:
-        F = None
+        # with open("/tmp/codenerix_transaction.txt", "a") as F: # noqa: N806
+        F = None  # noqa: N806
         if True:
             if F:
                 import datetime
@@ -1259,14 +1457,22 @@ class PaymentRequest(CodenerixModel):
                 func = resolve(
                     reverse(
                         "CNDX_payments_confirmation",
-                        kwargs={"locator": 0, "action": "success", "error": 0},
+                        kwargs={
+                            "locator": 0,
+                            "action": "success",
+                            "error": 0,
+                        },  # noqa: E501
                     )
                 ).func
             else:
                 func = resolve(
                     reverse(
                         self.reverse,
-                        kwargs={"locator": 0, "action": "success", "error": 0},
+                        kwargs={
+                            "locator": 0,
+                            "action": "success",
+                            "error": 0,
+                        },  # noqa: E501
                     )
                 ).func
 
@@ -1292,7 +1498,7 @@ class PaymentRequest(CodenerixModel):
                 if getattr(cl, "payment_paid", None):
                     if F:
                         F.write(
-                            "{} -     > NOTIFY PAID -> CLASS payment_paid({},{},{},{})\n".format(
+                            "{} -     > NOTIFY PAID -> CLASS payment_paid({},{},{},{})\n".format(  # noqa: E501
                                 now, "request", self.pk, self.locator, 0
                             )
                         )
@@ -1301,13 +1507,18 @@ class PaymentRequest(CodenerixModel):
                 else:
                     if F:
                         F.write(
-                            "{} -     > NOTIFY PAID -> FUNCTION func({},{},{},{},{})\n".format(
-                                now, "request", "paid", self.pk, self.locator, 0
+                            "{} -     > NOTIFY PAID -> FUNCTION func({},{},{},{},{})\n".format(  # noqa: E501
+                                now,
+                                "request",
+                                "paid",
+                                self.pk,
+                                self.locator,
+                                0,
                             )
                         )
                         F.flush()
                     func(request, "paid", self.locator, answer, 0)
-            except Exception as e:
+            except Exception:
 
                 if F:
                     # Get traceback
@@ -1316,29 +1527,39 @@ class PaymentRequest(CodenerixModel):
                     trace = traceback.extract_tb(sys.exc_info()[2])
                     error = "{}: {}".format(name, err)
                     for (filename, linenumber, affected, source) in trace:
-                        error += "\n  > Error in {} at {}:{} (source: {})".format(
-                            affected, filename, linenumber, source
+                        error += (
+                            "\n  > Error in {} at {}:{} (source: {})".format(
+                                affected, filename, linenumber, source
+                            )
                         )
 
                     # Prepare error
                     try:
-                        F.write("{} -     > EXCEPTION -> {}\n".format(now, error))
+                        F.write(
+                            "{} -     > EXCEPTION -> {}\n".format(now, error)
+                        )
                     except Exception:
                         F.write("{} -     > EXCEPTION -> ???\n".format(now))
                 try:
                     if getattr(cl, "payment_exception", None):
                         if F:
                             F.write(
-                                "{} -     > NOTIFY EXCEPTION -> CLASS payment_exception({},{},{},{})\n".format(
-                                    now, "request", self.pk, self.locator, error
+                                "{} -     > NOTIFY EXCEPTION -> CLASS payment_exception({},{},{},{})\n".format(  # noqa: E501
+                                    now,
+                                    "request",
+                                    self.pk,
+                                    self.locator,
+                                    error,
                                 )
                             )
                             F.flush()
-                        cl().payment_exception(request, self.locator, answer, error)
+                        cl().payment_exception(
+                            request, self.locator, answer, error
+                        )
                     else:
                         if F:
                             F.write(
-                                "{} -     > NOTIFY EXCEPTION -> FUNCTION func({},{},{},{},{})\n".format(
+                                "{} -     > NOTIFY EXCEPTION -> FUNCTION func({},{},{},{},{})\n".format(  # noqa: E501
                                     now,
                                     "request",
                                     "exception",
@@ -1348,7 +1569,9 @@ class PaymentRequest(CodenerixModel):
                                 )
                             )
                             F.flush()
-                        func(request, "exception", self.locator, answer, error)
+                        func(
+                            request, "exception", self.locator, answer, error
+                        )  # noqa: E501
                 except Exception:
                     pass
 
@@ -1376,9 +1599,13 @@ class PaymentConfirmation(CodenerixModel):
         null=False,
     )
     data = models.TextField(_("Data"), blank=True, null=True)
-    error = models.BooleanField(_("Error"), blank=False, null=False, default=False)
+    error = models.BooleanField(
+        _("Error"), blank=False, null=False, default=False
+    )
     error_txt = models.TextField(_("Error Text"), blank=True, null=True)
-    ip = models.GenericIPAddressField(_("IP"), blank=False, null=False, editable=False)
+    ip = models.GenericIPAddressField(
+        _("IP"), blank=False, null=False, editable=False
+    )
 
     def __unicode__(self):
         return "PayConf:{0}-{1}".format(self.payment, self.ref)
@@ -1401,7 +1628,7 @@ class PaymentConfirmation(CodenerixModel):
         fields.append(("ip", _("IP"), 100))
         return fields
 
-    def __limitQ__(self, info):
+    def __limitQ__(self, info):  # noqa: N802
         limit = {}
         # If user is not a superuser, the shown records depends on the profile
         if not info.request.user.is_superuser:
@@ -1433,7 +1660,8 @@ class PaymentConfirmation(CodenerixModel):
         error = None
         if not pr.cancelled:
 
-            # Paypal must check if the payment can be confirmed or not (checking if there is a PaymentAnswer)
+            # Paypal must check if the payment can be confirmed or
+            # not (checking if there is a PaymentAnswer)
             if pr.protocol == "paypal":
                 pa = pr.paymentanswers.filter(ref__isnull=False, error=False)
                 if pa.count():
@@ -1454,15 +1682,23 @@ class PaymentConfirmation(CodenerixModel):
 
                 # Get reference
                 if pr.protocol == "paypal":
-                    error = self.__action_paypal(config, pr, data, error, request)
+                    error = self.__action_paypal(
+                        config, pr, data, error, request
+                    )
                 elif pr.protocol == "redsys" or pr.protocol == "redsysxml":
-                    error = self.__action_redsys(config, pr, data, error, request)
+                    error = self.__action_redsys(
+                        config, pr, data, error, request
+                    )
                 elif pr.protocol == "yeepay":
-                    error = self.__action_yeepay(config, pr, data, error, request)
+                    error = self.__action_yeepay(
+                        config, pr, data, error, request
+                    )
                 else:
                     error = (
                         1,
-                        _("Unknown protocol '{protocol}'").format(protocol=pr.protocol),
+                        _("Unknown protocol '{protocol}'").format(
+                            protocol=pr.protocol
+                        ),
                     )
             else:
                 if meta.get("real", False):
@@ -1476,16 +1712,23 @@ class PaymentConfirmation(CodenerixModel):
                 error = (
                     2,
                     _(
-                        "Wrong environment: this transaction is for '{selfenviron}' environment and system is set to '{sysenviron}'"
+                        "Wrong environment: this transaction is "
+                        "for '{selfenviron}' environment and system is "
+                        "set to '{sysenviron}'"
                     ).format(selfenviron=envself, sysenviron=envsys),
                 )
         else:
-            error = (4, _("Payment has been cancelled/declined, access denied!"))
+            error = (
+                4,
+                _("Payment has been cancelled/declined, access denied!"),
+            )
 
         # If there was some error, save and launch it!
         if error:
             self.error = True
-            self.error_txt = json.dumps({"error": error[0], "errortxt": str(error[1])})
+            self.error_txt = json.dumps(
+                {"error": error[0], "errortxt": str(error[1])}
+            )
             self.save()
             raise PaymentError(*error)
 
@@ -1534,15 +1777,22 @@ class PaymentConfirmation(CodenerixModel):
                     if float(info["total"]) != float(pr.total):
                         error = (
                             3,
-                            _("Total does not match: our={our} paypal={paypal}").format(
-                                our=float(pr.total), paypal=float(info["total"])
+                            _(
+                                "Total does not match: our={our} "
+                                "paypal={paypal}"
+                            ).format(
+                                our=float(pr.total),
+                                paypal=float(info["total"]),
                             ),
                         )
-                    elif info["currency"].upper() != pr.currency.iso4217.upper():
+                    elif (
+                        info["currency"].upper() != pr.currency.iso4217.upper()
+                    ):
                         error = (
                             3,
                             _(
-                                "Currency does not math: our={our} paypal={paypal}"
+                                "Currency does not math: our={our} "
+                                "paypal={paypal}"
                             ).format(
                                 our=pr.currency.iso4217.upper(),
                                 paypal=info["currency"].upper(),
@@ -1551,19 +1801,23 @@ class PaymentConfirmation(CodenerixModel):
                     elif payerinf["status"] != "VERIFIED":
                         error = (
                             3,
-                            _("Payer hasn't been VERIFIED yet, it is {payer}").format(
-                                payer=payerinf["status"]
-                            ),
+                            _(
+                                "Payer hasn't been VERIFIED yet, it is {payer}"
+                            ).format(payer=payerinf["status"]),
                         )
                     elif payerinf["payer_info"]["payer_id"] != payer_id:
                         error = (
                             3,
-                            _("Wrong Payer ID: our={our} paypal={paypal}").format(
-                                our=payer_id, paypal=payerinf["payer_info"]["payer_id"]
+                            _(
+                                "Wrong Payer ID: our={our} paypal={paypal}"
+                            ).format(
+                                our=payer_id,
+                                paypal=payerinf["payer_info"]["payer_id"],
                             ),
                         )
                     else:
-                        # Everything is fine, payer verified and payment authorized
+                        # Everything is fine, payer verified and payment
+                        # authorized
                         self.ref = payer_id
                         self.save()
 
@@ -1578,7 +1832,8 @@ class PaymentConfirmation(CodenerixModel):
                     error = (
                         4,
                         _(
-                            "Payment is not ready for confirmation, status is '{status}' and it should be 'created'"
+                            "Payment is not ready for confirmation, status "
+                            "is '{status}' and it should be 'created'"
                         ).format(status=state),
                     )
 
@@ -1612,7 +1867,8 @@ class PaymentConfirmation(CodenerixModel):
     def __action_redsys(self, config, pr, data, error, request):
 
         if self.action == "confirm":
-            # Check if there is at least one remote confirmation for this payment
+            # Check if there is at least one remote confirmation for
+            # this payment
             pa = self.payment.paymentanswers.filter(
                 error=False, ref__isnull=False
             ).first()
@@ -1620,10 +1876,13 @@ class PaymentConfirmation(CodenerixModel):
                 error = (
                     4,
                     _(
-                        "Payment is not executed, we didn't get yet the confirmation from REDSYS"
+                        "Payment is not executed, we didn't get yet the "
+                        "confirmation from REDSYS"
                     ),
                 )
-            elif self.payment.paymentconfirmations.filter(ref__isnull=False).count():
+            elif self.payment.paymentconfirmations.filter(
+                ref__isnull=False
+            ).count():
                 error = (10, _("Payment is already confirmed"))
             else:
                 # Everything is fine, payer verified and payment authorized
@@ -1638,100 +1897,6 @@ class PaymentConfirmation(CodenerixModel):
         else:
             # Wrong action (this service is valid only for confirm and cancel)
             error = (6, _("Wrong action: {action}").format(action=self.action))
-
-        # We won't get confirmation data from Redsys, not anymore!
-        # else:
-        #
-        #    # Get authkey
-        #    authkey = base64.b64decode(config.get('auth_key', ''))
-        #
-        #    # Set arguments
-        #    signature = None
-        #    signature_version = None
-        #    params = None
-        #    paramsb64 = None
-        #
-        #    # Get arguments from data if we are confirming a payment
-        #    if self.action == 'confirm':
-        #        for key in data:
-        #            value = data[key]
-        #            if key == 'Ds_SignatureVersion':
-        #                signature_version = value
-        #            elif key == 'Ds_MerchantParameters':
-        #                paramsb64 = value
-        #                try:
-        #                    params = json.loads(base64.b64decode(paramsb64).decode())
-        #                except Exception:
-        #                    params = None
-        #            elif key == 'Ds_Signature':
-        #                signature = value.replace("/", "_").replace("+", "-")
-        #
-        #    # Check we have all information we need
-        #    if signature and signature_version and paramsb64 and params:
-        #
-        #        # Check version
-        #        if signature_version == 'HMAC_SHA256_V1':
-        #
-        #            # Build internal signature
-        #            signature_internal = redsys_signature(authkey, params.get('Ds_Order', ''), paramsb64, recode=True)
-        #
-        #            # Verify signature
-        #            if signature == signature_internal:
-        #
-        #                # In this point we have a confirmation request from the user with data in it, example:
-        #                # {"Ds_Date":"18%2F08%2F2016","Ds_Hour":"11%3A20","Ds_SecurePayment":"1","Ds_Amount":"1200","Ds_Currency":"978","Ds_Order":"00000070","Ds_MerchantCode":"999008881","Ds_Terminal":"001","Ds_Response":"0000","Ds_TransactionType":"0","Ds_MerchantData":"","Ds_AuthorisationCode":"841950","Ds_Card_Number":"454881******0004","Ds_ConsumerLanguage":"1","Ds_Card_Country":"724"}
-        #
-        #                # Get info
-        #                amount = params.get('Ds_Amount', None)
-        #                authorisation = params.get('Ds_AuthorisationCode', None)
-        #
-        #                # Check if payment is ready for fonfirmation
-        #                if amount and authorisation:
-        #
-        #                    if float(amount) / 100 == self.payment.total:
-        #
-        #                        # Check if there is at least one remote confirmation for this payment
-        #                        if not self.payment.paymentanswers.filter(error=False).count():
-        #                            error = (4, "Payment is not ready for executing, the system didn't get yet the confirmation from REDSYS")
-        #                        elif self.payment.paymentconfirmations.filter(ref__isnull=False).count():
-        #                            error = (10, "Payment is already confirmed")
-        #                        else:
-        #                            # Everything is fine, payer verified and payment authorized
-        #                            self.ref = authorisation
-        #                            self.save()
-        #                    else:
-        #                        error = (3, "Amount doesn't match to the payment request: our={} - remote={}".format(self.payment.total, float(amount) / 100))
-        #                else:
-        #                    if not amount:
-        #                        error = (3, "Missing amount in your confirmation request")
-        #                    elif not authorisation:
-        #                        error = (3, "Missing authorisation code in your confirmation request")
-        #                    else:
-        #                        error = (3, "Missing info in your confirmation request")
-        #            else:
-        #                error = (9, "Invalid signature: our={} - remote={}".format(signature_internal, signature))
-        #        else:
-        #            error = (9, "Invalid signature version")
-        #
-        #    else:
-        #
-        #        if self.action == 'cancel':
-        #            # Cancel payment
-        #            pr.cancelled = True
-        #            pr.save()
-        #            # Remember payment confirmation for future reference
-        #            self.save()
-        #        else:
-        #            missing = []
-        #            if not params:
-        #                missing.append("Ds_MerchantParameters has wrong encoding")  # No Base64
-        #            if not paramsb64:
-        #                missing.append("Missing Ds_MerchantParameters")
-        #            if not signature:
-        #                missing.append("Missing Ds_Signature")
-        #            if not signature_version:
-        #                missing.append("Missing Ds_SignatureVersion")
-        #            error = (6, "Missing information in data: {}".format(", ".join(missing)))
 
         # Return error
         return error
@@ -1752,10 +1917,13 @@ class PaymentConfirmation(CodenerixModel):
             separador = signature_src.index("$")
             sign = signature_src[:separador]
 
-            if verify_rsa(data, sign, config.get("public_key", "")):
+            encryptor = RsaEncryptor(config.get("public_key", None))
+
+            if encryptor.verify_signature(data, sign):
 
                 if self.action == "confirm":
-                    # Check if there is at least one remote confirmation for this payment
+                    # Check if there is at least one remote confirmation for
+                    # this payment
                     pa = self.payment.paymentanswers.filter(
                         error=False, ref__isnull=False
                     ).first()
@@ -1763,7 +1931,8 @@ class PaymentConfirmation(CodenerixModel):
                         error = (
                             4,
                             _(
-                                "Payment is not executed, we didn't get yet the confirmation from Yeepay"
+                                "Payment is not executed, we didn't get yet "
+                                "the confirmation from Yeepay"
                             ),
                         )
                     elif self.payment.paymentconfirmations.filter(
@@ -1771,12 +1940,17 @@ class PaymentConfirmation(CodenerixModel):
                     ).count():
                         error = (10, _("Payment is already confirmed"))
                     else:
-                        # Everything is fine, payer verified and payment authorized
+                        # Everything is fine, payer verified and payment
+                        # authorized
                         self.ref = pa.ref
                         self.save()
                 else:
-                    # Wrong action (this service is valid only for confirm and cancel)
-                    error = (6, _("Wrong action: {action}").format(action=self.action))
+                    # Wrong action (this service is valid only for confirm
+                    # and cancel)
+                    error = (
+                        6,
+                        _("Wrong action: {action}").format(action=self.action),
+                    )
             else:
                 error = (1, _("Invalid sign"))
         else:
@@ -1808,7 +1982,9 @@ class PaymentAnswer(CodenerixModel):
     ref = models.CharField(
         _("Reference"), max_length=50, blank=False, null=True, default=None
     )
-    error = models.BooleanField(_("Error"), blank=False, null=False, default=False)
+    error = models.BooleanField(
+        _("Error"), blank=False, null=False, default=False
+    )
     error_txt = models.TextField(_("Error Text"), blank=True, null=True)
 
     request = models.TextField(_("Request"), blank=True, null=True)
@@ -1819,7 +1995,9 @@ class PaymentAnswer(CodenerixModel):
     answer_date = models.DateTimeField(
         _("Answer date"), editable=False, blank=True, null=True
     )
-    ip = models.GenericIPAddressField(_("IP"), blank=False, null=False, editable=False)
+    ip = models.GenericIPAddressField(
+        _("IP"), blank=False, null=False, editable=False
+    )
 
     def __unicode__(self):
         if self.error:
@@ -1846,7 +2024,7 @@ class PaymentAnswer(CodenerixModel):
         fields.append(("ip", _("IP"), 100))
         return fields
 
-    def __limitQ__(self, info):
+    def __limitQ__(self, info):  # noqa: N802
         limit = {}
         # If user is not a superuser, the shown records depends on the profile
         if not info.request.user.is_superuser:
@@ -1868,9 +2046,9 @@ class PaymentAnswer(CodenerixModel):
                 if pr.protocol == "paypal":
 
                     # Get last confirmation
-                    pc = pr.paymentconfirmations.filter(ref__isnull=False).order_by(
-                        "-created"
-                    )[0]
+                    pc = pr.paymentconfirmations.filter(
+                        ref__isnull=False
+                    ).order_by("-created")[0]
 
                     # Try to nofify paypal automatically about this payment
                     payment_id = pr.ref
@@ -1886,12 +2064,12 @@ class PaymentAnswer(CodenerixModel):
                     paypalrestsdk.configure(
                         {
                             "mode": environment,
-                            "client_id": settings.PAYMENTS.get(pr.platform, {}).get(
-                                "id", None
-                            ),
-                            "client_secret": settings.PAYMENTS.get(pr.platform, {}).get(
-                                "secret", None
-                            ),
+                            "client_id": settings.PAYMENTS.get(
+                                pr.platform, {}
+                            ).get("id", None),
+                            "client_secret": settings.PAYMENTS.get(
+                                pr.platform, {}
+                            ).get("secret", None),
                         }
                     )
 
@@ -1906,7 +2084,9 @@ class PaymentAnswer(CodenerixModel):
                         state = payment.to_dict()["state"]
                         if state == "created":
                             # Get info about transaction
-                            info = payment.to_dict()["transactions"][0]["amount"]
+                            info = payment.to_dict()["transactions"][0][
+                                "amount"
+                            ]
                             # Get info about the payer
                             payerinf = payment.to_dict()["payer"]
                             # Verify all
@@ -1914,18 +2094,22 @@ class PaymentAnswer(CodenerixModel):
                                 raise PaymentError(
                                     3,
                                     _(
-                                        "Total does not match: our={our} paypal={paypal}"
+                                        "Total does not match: our={our} "
+                                        "paypal={paypal}"
                                     ).format(
-                                        our=float(pr.total), paypal=float(info["total"])
+                                        our=float(pr.total),
+                                        paypal=float(info["total"]),
                                     ),
                                 )
                             elif (
-                                info["currency"].upper() != pr.currency.iso4217.upper()
+                                info["currency"].upper()
+                                != pr.currency.iso4217.upper()
                             ):
                                 raise PaymentError(
                                     3,
                                     _(
-                                        "Currency does not math: our={our} paypal={paypal}"
+                                        "Currency does not math: our={our} "
+                                        "paypal={paypal}"
                                     ).format(
                                         our=pr.currency.iso4217.upper(),
                                         paypal=info["currency"].upper(),
@@ -1935,21 +2119,28 @@ class PaymentAnswer(CodenerixModel):
                                 raise PaymentError(
                                     3,
                                     _(
-                                        "Payer hasn't been VERIFIED yet, it is {payer}"
+                                        "Payer hasn't been VERIFIED yet, "
+                                        "it is {payer}"
                                     ).format(payer=payerinf["status"]),
                                 )
-                            elif payerinf["payer_info"]["payer_id"] != payer_id:
+                            elif (
+                                payerinf["payer_info"]["payer_id"] != payer_id
+                            ):
                                 raise PaymentError(
                                     3,
                                     _(
-                                        "Wrong Payer ID: our={our} paypal={paypal}"
+                                        "Wrong Payer ID: our={our} "
+                                        "paypal={paypal}"
                                     ).format(
                                         our=payer_id,
-                                        paypal=payerinf["payer_info"]["payer_id"],
+                                        paypal=payerinf["payer_info"][
+                                            "payer_id"
+                                        ],
                                     ),
                                 )
                             else:
-                                # Everything is fine, payer verified and payment authorized
+                                # Everything is fine, payer verified and
+                                # payment authorized
                                 request = {"payer_id": payer_id}
                                 # Save request
                                 self.request = json.dumps(request)
@@ -1966,21 +2157,26 @@ class PaymentAnswer(CodenerixModel):
                             raise PaymentError(
                                 4,
                                 _(
-                                    "Payment is not ready for executing, status is '{status}' and it should be 'created'"
+                                    "Payment is not ready for executing, "
+                                    "status is '{status}' and it should "
+                                    "be 'created'"
                                 ).format(status=state),
                             )
                     else:
                         raise PaymentError(5, _("Payment not found!"))
 
                 elif self.payment.protocol in ["redsys", "redsysxml"]:
-                    # Protocols which do not need any work to get done during save() process
+                    # Protocols which do not need any work to get done
+                    # during save() process
                     pass
                 elif self.payment.protocol == "yeepay":
                     pass
                 else:
                     raise PaymentError(
                         1,
-                        _("Unknown protocol '{protocol}'").format(protocol=pr.protocol),
+                        _("Unknown protocol '{protocol}'").format(
+                            protocol=pr.protocol
+                        ),
                     )
 
             else:
@@ -1995,7 +2191,9 @@ class PaymentAnswer(CodenerixModel):
                 raise PaymentError(
                     2,
                     _(
-                        "Wrong environment: this transaction is for '{selfenviron}' environment and system is set to '{sysenviron}'".format(
+                        "Wrong environment: this transaction is "
+                        "for '{selfenviron}' environment and system "
+                        "is set to '{sysenviron}'".format(
                             selfenviron=envself, sysenviron=envsys
                         )
                     ),
@@ -2042,7 +2240,9 @@ class PaymentAnswer(CodenerixModel):
                     elif key == "Ds_MerchantParameters":
                         paramsb64 = value
                         try:
-                            params = json.loads(base64.b64decode(paramsb64).decode())
+                            params = json.loads(
+                                base64.b64decode(paramsb64).decode()
+                            )
                         except Exception:
                             params = None
                     elif key == "Ds_Signature":
@@ -2063,14 +2263,18 @@ class PaymentAnswer(CodenerixModel):
 
                         # Build signature
                         signature_internal = redsys_signature(
-                            authkey, params.get("Ds_Order", ""), paramsb64, recode=True
+                            authkey,
+                            params.get("Ds_Order", ""),
+                            paramsb64,
+                            recode=True,
                         )
 
                         # Verify signature
                         if signature == signature_internal:
 
-                            # In this point we have a confirmation request from the redsys with data in it, example:
-                            # {"Ds_Date":"23\/08\/2016","Ds_Hour":"17:52","Ds_SecurePayment":"1","Ds_Card_Number":"454881******0004","Ds_Card_Country":"724","Ds_Amount":"1200","Ds_Currency":"978","Ds_Order":"00000015","Ds_MerchantCode":"999008881","Ds_Terminal":"001","Ds_Response":"0000","Ds_MerchantData":"","Ds_TransactionType":"0","Ds_ConsumerLanguage":"1","Ds_AuthorisationCode":"629178"}
+                            # In this point we have a confirmation request
+                            # from the redsys with data in it, example:
+                            # {"Ds_Date":"23\/08\/2016","Ds_Hour":"17:52","Ds_SecurePayment":"1","Ds_Card_Number":"454881******0004","Ds_Card_Country":"724","Ds_Amount":"1200","Ds_Currency":"978","Ds_Order":"00000015","Ds_MerchantCode":"999008881","Ds_Terminal":"001","Ds_Response":"0000","Ds_MerchantData":"","Ds_TransactionType":"0","Ds_ConsumerLanguage":"1","Ds_AuthorisationCode":"629178"} # noqa: E501
 
                             # Get info
                             amount = params.get("Ds_Amount", None)
@@ -2083,7 +2287,8 @@ class PaymentAnswer(CodenerixModel):
 
                                 if float(amount) / 100 == self.payment.total:
 
-                                    # Everything is fine, payer verified and payment authorized
+                                    # Everything is fine, payer verified and
+                                    # payment authorized
                                     self.ref = authorisation
                                     self.error = False
                                     self.error_txt = None
@@ -2095,7 +2300,9 @@ class PaymentAnswer(CodenerixModel):
                                     error = (
                                         3,
                                         _(
-                                            "Amount doesn't match to the payment request: our={our} - remote={remote}"
+                                            "Amount doesn't match to the "
+                                            "payment request: our={our} - "
+                                            "remote={remote}"
                                         ).format(
                                             our=self.payment.total,
                                             remote=float(amount) / 100,
@@ -2108,12 +2315,15 @@ class PaymentAnswer(CodenerixModel):
                                     error = (
                                         3,
                                         _(
-                                            "Missing amount in your confirmation request"
+                                            "Missing amount in your "
+                                            "confirmation request"
                                         ),
                                     )
                                 elif not authorisation:
                                     # Error code
-                                    errorcode = params.get("Ds_ErrorCode", None)
+                                    errorcode = params.get(
+                                        "Ds_ErrorCode", None
+                                    )
                                     if errorcode:
                                         self.ref = errorcode
                                         answer["errorcode"] = errorcode
@@ -2122,21 +2332,28 @@ class PaymentAnswer(CodenerixModel):
                                         error = (
                                             3,
                                             _(
-                                                "Missing authorisation code in your confirmation request"
+                                                "Missing authorisation code "
+                                                "in your confirmation request"
                                             ),
                                         )
                                 else:
                                     error = (
                                         3,
-                                        _("Missing info in your confirmation request"),
+                                        _(
+                                            "Missing info in your "
+                                            "confirmation request"
+                                        ),
                                     )
 
                         else:
                             error = (
                                 9,
                                 _(
-                                    "Invalid signature version: our={our} - remote={remote}"
-                                ).format(our=signature_internal, remote=signature),
+                                    "Invalid signature version: our={our} - "
+                                    "remote={remote}"
+                                ).format(
+                                    our=signature_internal, remote=signature
+                                ),
                             )
 
                     else:
@@ -2167,11 +2384,12 @@ class PaymentAnswer(CodenerixModel):
 
                     config = settings.PAYMENTS.get(pr.protocol, {})
 
-                    if customer_id == config.get("customerId", False):
-                        private_key = config.get("private_key", False)
-                        public_key = config.get("public_key", False)
+                    if customer_id == config.get("merchant_number", False):
+                        private_key = config.get("private_key", None)
+                        public_key = config.get("public_key", None)
+                        encryptor = RsaEncryptor(private_key, public_key)
                         try:
-                            infotxt = decrypt(response, private_key, public_key)
+                            infotxt = encryptor.envelop_decrypt(response)
                         except Exception:
                             infotxt = None
                         if infotxt:
@@ -2192,7 +2410,10 @@ class PaymentAnswer(CodenerixModel):
                                 # Get retCode
                                 errorcode = info.get("retCode", None)
                                 if errorcode is None:
-                                    error = (6, _("Missing retCode in your request"))
+                                    error = (
+                                        6,
+                                        _("Missing retCode in your request"),
+                                    )
                                 elif errorcode != "0000":
                                     # Error code
                                     self.ref = errorcode
@@ -2212,7 +2433,7 @@ class PaymentAnswer(CodenerixModel):
                                             error = (
                                                 3,
                                                 _(
-                                                    "Missing {} in your confirmation request".format(
+                                                    "Missing {} in your confirmation request".format(  # noqa: E501
                                                         field
                                                     )
                                                 ),
@@ -2223,9 +2444,13 @@ class PaymentAnswer(CodenerixModel):
                                     if not error:
 
                                         # Get data
-                                        local_customer_request_no = pr.order_ref
+                                        local_customer_request_no = (
+                                            pr.order_ref
+                                        )
                                         try:
-                                            customer_no = int(info["customerNo"])
+                                            customer_no = int(
+                                                info["customerNo"]
+                                            )
                                         except ValueError:
                                             customer_no = None
                                         try:
@@ -2238,20 +2463,30 @@ class PaymentAnswer(CodenerixModel):
                                             info["customerRequestNo"]
                                             != local_customer_request_no
                                         ):
-                                            error = (3, _("customerRequestNo invalid"))
+                                            error = (
+                                                3,
+                                                _("customerRequestNo invalid"),
+                                            )
                                         elif customer_no != config.get(
                                             "customerNo", None
                                         ):
-                                            error = (3, _("customerNo invalid"))
+                                            error = (
+                                                3,
+                                                _("customerNo invalid"),
+                                            )
                                         elif info["status"] != "SUCCESS":
-                                            error = (3, _("Status is not 'SUCCESS'"))
+                                            error = (
+                                                3,
+                                                _("Status is not 'SUCCESS'"),
+                                            )
                                         elif amount != pr.total:
                                             error = (3, _("Amount invalid"))
                                         elif external_no == "":
                                             error = (3, _("externalNo empty"))
 
                                         if not error:
-                                            # Everything is fine, payer verified and payment authorized
+                                            # Everything is fine, payer
+                                            # verified and payment authorized
                                             self.ref = external_no
                                             self.error = False
                                             self.error_txt = None
@@ -2261,7 +2496,8 @@ class PaymentAnswer(CodenerixModel):
                                         answer["result"] = "OK"
 
                             else:
-                                # The data we have received is not JSON encoded (save as is)
+                                # The data we have received is
+                                # not JSON encoded (save as is)
                                 error = (11, _("Data is not JSON"))
                                 self.request = json.dumps(
                                     {
@@ -2275,7 +2511,9 @@ class PaymentAnswer(CodenerixModel):
                     else:
                         error = (
                             3,
-                            _("Customer id unknown").format(missing=", ".join(missing)),
+                            _("Customer id unknown").format(
+                                missing=", ".join(missing)
+                            ),
                         )
                 else:
                     missing = []
@@ -2292,7 +2530,9 @@ class PaymentAnswer(CodenerixModel):
             else:
                 error = (
                     1,
-                    _("Unknown protocol '{protocol}'").format(protocol=pr.protocol),
+                    _("Unknown protocol '{protocol}'").format(
+                        protocol=pr.protocol
+                    ),
                 )
 
             # If there are errors
@@ -2340,6 +2580,6 @@ class PaymentError(Exception):
     9:  Information in the transaction is not authorized (signature not valid)
     10: Payment already confirmed
     11: Wrong information on the request
-    """
+    """  # noqa: E501
 
     pass

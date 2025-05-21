@@ -46,10 +46,10 @@ setup(
         "Topic :: Internet :: WWW/HTTP :: Dynamic Content",
     ],
     install_requires=[
-        "django-codenerix",
+        "django-codenerix>=5.0.23",
         "paypalrestsdk",
         "oss2",
         "rsa",
-        "simplejson",
+        "yop-python-sdk>=4.3.0",
     ],
 )

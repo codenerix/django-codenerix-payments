@@ -28,16 +28,17 @@ from django.http import HttpResponse, HttpResponseRedirect
 from django.utils.translation import gettext_lazy as _, gettext as __
 from django.contrib.auth.decorators import login_required
 from django.conf import settings
-from django.shortcuts import redirect, get_object_or_404
-from django.db.models import Q
+from django.shortcuts import get_object_or_404
 from django.shortcuts import render
 
-from codenerix.helpers import get_client_ip
-from codenerix.views import (
+from codenerix.helpers import get_client_ip  # type: ignore
+from codenerix.views import (  # type: ignore
     GenList,
     GenDetail,
     GenCreate,
+    GenCreateModal,
     GenUpdate,
+    GenUpdateModal,
     GenDelete,
     GenForeignKey,
 )
@@ -65,6 +66,10 @@ class CurrencyCreate(GenCreate):
     form_class = CurrencyForm
 
 
+class CurrencyCreateModal(GenCreateModal, CurrencyCreate):
+    pass
+
+
 class CurrencyDetail(GenDetail):
     model = Currency
     form_class = CurrencyForm
@@ -73,6 +78,10 @@ class CurrencyDetail(GenDetail):
 class CurrencyUpdate(GenUpdate):
     model = Currency
     form_class = CurrencyForm
+
+
+class CurrencyUpdateModal(GenUpdateModal, CurrencyUpdate):
+    pass
 
 
 class CurrencyDelete(GenDelete):
@@ -97,7 +106,8 @@ class PaymentRequestList(GenList):
     def dispatch(self, *args, **kwargs):
         self.client_context = {
             "cancelurl": reverse(
-                "payment_url", kwargs={"action": "cancel", "locator": "LOCATOR"}
+                "payment_url",
+                kwargs={"action": "cancel", "locator": "LOCATOR"},
             )
         }
         if getattr(settings, "CDNX_PAYMENTS_REQUEST_PAY", False):
@@ -146,9 +156,17 @@ class PaymentRequestCreate(GenCreate):
         return super(PaymentRequestCreate, self).form_valid(form)
 
 
+class PaymentRequestCreateModal(GenCreateModal, PaymentRequestCreate):
+    pass
+
+
 class PaymentRequestUpdate(GenUpdate):
     model = PaymentRequest
     form_class = PaymentRequestUpdateForm
+
+
+class PaymentRequestUpdateModal(GenUpdateModal, PaymentRequestUpdate):
+    pass
 
 
 class PaymentRequestDetail(GenDetail):
@@ -163,10 +181,12 @@ class PaymentRequestDetail(GenDetail):
             ["reverse", 6],
             ["platform", 6],
             ["protocol", 6],
+            ["user", 6],
         ),
         (
             _("Process"),
             6,
+            ["order_ref", 6],
             ["real", 6],
             ["cancelled", 6],
             ["total", 6],
@@ -240,7 +260,9 @@ class PaymentConfirmationList(GenList):
     linkadd = False
     show_details = True
     default_ordering = ["-created"]
-    static_partial_row = "codenerix_payments/partials/paymentsconfirmlist_rows.html"
+    static_partial_row = (
+        "codenerix_payments/partials/paymentsconfirmlist_rows.html"
+    )
     gentranslate = {"yes": __("Yes"), "no": __("No")}
 
 
@@ -260,7 +282,9 @@ class PaymentAnswerList(GenList):
     linkadd = False
     show_details = True
     default_ordering = ["-request_date"]
-    static_partial_row = "codenerix_payments/partials/paymentsanswerlist_rows.html"
+    static_partial_row = (
+        "codenerix_payments/partials/paymentsanswerlist_rows.html"
+    )
     gentranslate = {"yes": __("Yes"), "no": __("No")}
 
 
@@ -303,7 +327,7 @@ class PaymentAction(View):
     PAxx: Error al gestionar un PaymentAnswer
     PSxx: Error al gestionar un PaymentSuccess
     ( xx : to know these codes please check the class PaymentError in models.py )
-    """
+    """  # noqa: E501
 
     @method_decorator(csrf_exempt)
     def dispatch(self, request, *args, **kwargs):
@@ -316,7 +340,8 @@ class PaymentAction(View):
             # Get incoming details
             locator = kwargs.get("locator", None)
             action = kwargs.get("action", None)
-            # F.write("{} - Start CID;{} ACTION:{}\n".format(now, locator, action))
+            # F.write("{} - Start CID;{} ACTION:{}\n".format(now,
+            # locator, action))
 
             # Find the payment request
             try:
@@ -324,14 +349,16 @@ class PaymentAction(View):
             except PaymentRequest.DoesNotExist:
                 pr = None
             # if pr:
-            #    F.write("{} - PR {} - REVERSE:{}\n".format(now, pr, pr.reverse))
+            #    F.write("{} - PR {} - REVERSE:{}\n".format(now, pr,
+            #    pr.reverse))
             # else:
             #    F.write("{} - PR NOT FOUND!\n")
 
             # Prepare answer
             answer = {"action": action, "locator": locator, "error": 0}
 
-            # Set the kind of answer (if the reverse string is 'reverse', JSON will be used)
+            # Set the kind of answer (if the reverse string is 'reverse', JSON
+            # will be used)
             answer_json = (not pr) or (pr.reverse == "reverse")
 
             # Check if we found the payment request
@@ -362,7 +389,8 @@ class PaymentAction(View):
                                 answer["errortxt"] = str(e.args[1])
 
                     else:
-                        # ERROR: Unknown action for paypal (only allowed 'confirm' or 'cancel'
+                        # ERROR: Unknown action for paypal (only allowed
+                        # 'confirm' or 'cancel'
                         answer["error"] = "P004"
 
                 # --- REDSYS / REDSYSXML ---
@@ -384,7 +412,8 @@ class PaymentAction(View):
                             # F.write("{} - NOTIFY Success\n".format(now))
                             # F.flush()
                         except PaymentError as e:
-                            # F.write("{} - NOTIFY Error - {}\n".format(now, e))
+                            # F.write("{} - NOTIFY Error - {}\n".format(now,
+                            # e))
                             # F.flush()
                             answer["error"] = "PS{:02d}".format(e.args[0])
                             if settings.DEBUG:
@@ -411,7 +440,8 @@ class PaymentAction(View):
                                 answer["errortxt"] = str(e.args[1])
 
                     else:
-                        # ERROR: Unknown action for redsys/redsysxml (only allowed 'success', 'confirm' or 'cancel'
+                        # ERROR: Unknown action for redsys/redsysxml (only
+                        # allowed 'success', 'confirm' or 'cancel'
                         answer["error"] = "P003"
 
                 # --- YEEPAY ---
@@ -433,7 +463,8 @@ class PaymentAction(View):
                             # F.write("{} - NOTIFY Success\n".format(now))
                             # F.flush()
                         except PaymentError as e:
-                            # F.write("{} - NOTIFY Error - {}\n".format(now, e))
+                            # F.write("{} - NOTIFY Error - {}\n".format(now,
+                            # e))
                             # F.flush()
                             answer["error"] = "PS{:02d}".format(e.args[0])
                             if settings.DEBUG:
@@ -460,7 +491,8 @@ class PaymentAction(View):
                                 answer["errortxt"] = str(e.args[1])
 
                     else:
-                        # ERROR: Unknown action for yeepay (only allowed 'success', 'confirm' or 'cancel')
+                        # ERROR: Unknown action for yeepay (only allowed
+                        # 'success', 'confirm' or 'cancel')
                         answer["error"] = "P005"
 
                 # --- Unknown protocol ---
@@ -473,11 +505,14 @@ class PaymentAction(View):
 
             # Return using JSON or normal redirect
             if answer_json:
-                return HttpResponse(json.dumps(answer), content_type="application/json")
+                return HttpResponse(
+                    json.dumps(answer), content_type="application/json"
+                )
             else:
                 if pr.reverse == "autorender" or bool(
                     self.request.GET.get(
-                        "autorender", self.request.POST.get("autorender", False)
+                        "autorender",
+                        self.request.POST.get("autorender", False),
                     )
                 ):
                     keys = ["action", "error", "locator"]
@@ -493,10 +528,12 @@ class PaymentAction(View):
                         reverse("CNDX_payments_confirmation", kwargs=newanswer)
                     )
                 else:
-                    return HttpResponseRedirect(reverse(pr.reverse, kwargs=answer))
+                    return HttpResponseRedirect(
+                        reverse(pr.reverse, kwargs=answer)
+                    )
 
             # GET:  <QueryDict: {}>
-            # POST: <QueryDict: {u'Ds_Signature': [u'cURiymdHBZof0dhnWCHki7muP59t9o5SNJy5nVLrGew='], u'Ds_MerchantParameters': [u'eyJEc19EYXRlIjoiMjNcLzA4XC8yMDE2IiwiRHNfSG91ciI6IjE3OjUyIiwiRHNfU2VjdXJlUGF5bWVudCI6IjEiLCJEc19DYXJkX051bWJlciI6IjQ1NDg4MSoqKioqKjAwMDQiLCJEc19DYXJkX0NvdW50cnkiOiI3MjQiLCJEc19BbW91bnQiOiIxMjAwIiwiRHNfQ3VycmVuY3kiOiI5NzgiLCJEc19PcmRlciI6IjAwMDAwMDE1IiwiRHNfTWVyY2hhbnRDb2RlIjoiOTk5MDA4ODgxIiwiRHNfVGVybWluYWwiOiIwMDEiLCJEc19SZXNwb25zZSI6IjAwMDAiLCJEc19NZXJjaGFudERhdGEiOiIiLCJEc19UcmFuc2FjdGlvblR5cGUiOiIwIiwiRHNfQ29uc3VtZXJMYW5ndWFnZSI6IjEiLCJEc19BdXRob3Jpc2F0aW9uQ29kZSI6IjYyOTE3OCJ9'], u'Ds_SignatureVersion': [u'HMAC_SHA256_V1']}>
+            # POST: <QueryDict: {u'Ds_Signature': [u'cURiymdHBZof0dhnWCHki7muP59t9o5SNJy5nVLrGew='], u'Ds_MerchantParameters': [u'eyJEc19EYXRlIjoiMjNcLzA4XC8yMDE2IiwiRHNfSG91ciI6IjE3OjUyIiwiRHNfU2VjdXJlUGF5bWVudCI6IjEiLCJEc19DYXJkX051bWJlciI6IjQ1NDg4MSoqKioqKjAwMDQiLCJEc19DYXJkX0NvdW50cnkiOiI3MjQiLCJEc19BbW91bnQiOiIxMjAwIiwiRHNfQ3VycmVuY3kiOiI5NzgiLCJEc19PcmRlciI6IjAwMDAwMDE1IiwiRHNfTWVyY2hhbnRDb2RlIjoiOTk5MDA4ODgxIiwiRHNfVGVybWluYWwiOiIwMDEiLCJEc19SZXNwb25zZSI6IjAwMDAiLCJEc19NZXJjaGFudERhdGEiOiIiLCJEc19UcmFuc2FjdGlvblR5cGUiOiIwIiwiRHNfQ29uc3VtZXJMYW5ndWFnZSI6IjEiLCJEc19BdXRob3Jpc2F0aW9uQ29kZSI6IjYyOTE3OCJ9'], u'Ds_SignatureVersion': [u'HMAC_SHA256_V1']}>  # noqa: E501
             # REQUEST: <WSGIRequest: POST '/payments/action/15/success/'>
             # ARGS: ()
             # KWARGS: {'action': u'success', 'cid': u'15'}
@@ -552,7 +589,9 @@ class Verifysign(View):
         """
 
         # print(request.GET['authtoken'])
-        return HttpResponse(json.dumps(answer), content_type="application/json")
+        return HttpResponse(
+            json.dumps(answer), content_type="application/json"
+        )
         """
 
         # Get PaymentRequest if any
