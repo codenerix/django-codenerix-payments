@@ -360,6 +360,7 @@ class PaymentAction(View):
             # Set the kind of answer (if the reverse string is 'reverse', JSON
             # will be used)
             answer_json = (not pr) or (pr.reverse == "reverse")
+            answer_plain = None
 
             # Check if we found the payment request
             if pr:
@@ -459,16 +460,30 @@ class PaymentAction(View):
                             answer = pa.success(pr, request.POST, request)
                             # F.write("{} - PA Success\n".format(now))
                             # F.flush()
-                            pa.payment.notify(request, answer=answer)
-                            # F.write("{} - NOTIFY Success\n".format(now))
-                            # F.flush()
+
+                            # Analyze the answer
+                            notify = True
+                            if answer:
+                                result = answer.get("result", None)
+                                if result == "OK":
+                                    answer_plain = "SUCCESS"
+                                elif result == "ALREADY_OK":
+                                    answer_plain = "SUCCESS"
+                                    notify = False
+
+                            # Notify the payment
+                            if notify:
+                                pa.payment.notify(request, answer=answer)
+                                # F.write("{} - NOTIFY Success\n".format(now))
+                                # F.flush()
+
                         except PaymentError as e:
-                            # F.write("{} - NOTIFY Error - {}\n".format(now,
-                            # e))
+                            # F.write("{} - NOTIFY Error - {}\n".format(now, e))
                             # F.flush()
                             answer["error"] = "PS{:02d}".format(e.args[0])
                             if settings.DEBUG:
                                 answer["errortxt"] = str(e.args[1])
+                            # answer_plain = "SUCCESS"
 
                     elif action == "confirm":
                         pc = PaymentConfirmation()
@@ -504,11 +519,20 @@ class PaymentAction(View):
                 answer["error"] = "P001"
 
             # Return using JSON or normal redirect
-            if answer_json:
+            if answer_plain:
+
+                # Special case for those that need a forced plain text answer
+                return HttpResponse(answer_plain, content_type="text/plain")
+
+            elif answer_json:
+
+                # This is the normal case, we return a JSON answer
                 return HttpResponse(
                     json.dumps(answer), content_type="application/json"
                 )
             else:
+
+                # This is the case when we return a redirect to the user
                 if pr.reverse == "autorender" or bool(
                     self.request.GET.get(
                         "autorender",
@@ -531,12 +555,6 @@ class PaymentAction(View):
                     return HttpResponseRedirect(
                         reverse(pr.reverse, kwargs=answer)
                     )
-
-            # GET:  <QueryDict: {}>
-            # POST: <QueryDict: {u'Ds_Signature': [u'cURiymdHBZof0dhnWCHki7muP59t9o5SNJy5nVLrGew='], u'Ds_MerchantParameters': [u'eyJEc19EYXRlIjoiMjNcLzA4XC8yMDE2IiwiRHNfSG91ciI6IjE3OjUyIiwiRHNfU2VjdXJlUGF5bWVudCI6IjEiLCJEc19DYXJkX051bWJlciI6IjQ1NDg4MSoqKioqKjAwMDQiLCJEc19DYXJkX0NvdW50cnkiOiI3MjQiLCJEc19BbW91bnQiOiIxMjAwIiwiRHNfQ3VycmVuY3kiOiI5NzgiLCJEc19PcmRlciI6IjAwMDAwMDE1IiwiRHNfTWVyY2hhbnRDb2RlIjoiOTk5MDA4ODgxIiwiRHNfVGVybWluYWwiOiIwMDEiLCJEc19SZXNwb25zZSI6IjAwMDAiLCJEc19NZXJjaGFudERhdGEiOiIiLCJEc19UcmFuc2FjdGlvblR5cGUiOiIwIiwiRHNfQ29uc3VtZXJMYW5ndWFnZSI6IjEiLCJEc19BdXRob3Jpc2F0aW9uQ29kZSI6IjYyOTE3OCJ9'], u'Ds_SignatureVersion': [u'HMAC_SHA256_V1']}>  # noqa: E501
-            # REQUEST: <WSGIRequest: POST '/payments/action/15/success/'>
-            # ARGS: ()
-            # KWARGS: {'action': u'success', 'cid': u'15'}
 
 
 class PaymentConfirmationAutorender(View):

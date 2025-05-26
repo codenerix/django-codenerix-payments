@@ -21,6 +21,7 @@
 # type: ignore
 
 import sys
+import datetime
 import traceback
 import json
 import tempfile
@@ -31,11 +32,11 @@ import time
 import datetime
 import requests
 import math
-import importlib
 from decimal import Decimal, InvalidOperation
 
 from Crypto.Cipher import DES3
 from Crypto.Hash import HMAC, SHA256
+from Crypto.PublicKey import RSA
 
 # from suds.client import Client as SOAPClient
 
@@ -47,6 +48,7 @@ from django.urls import reverse, resolve
 from django.utils import timezone
 from django.utils.encoding import smart_str
 from django.core.validators import MaxValueValidator
+from django.urls.exceptions import NoReverseMatch
 
 from codenerix.middleware import get_current_user  # type: ignore
 from codenerix.models import CodenerixModel  # type: ignore
@@ -461,6 +463,30 @@ def redsys_error(code):
         return _("UNKNOWN CODE {code}").format(code=code)
 
 
+def yeepay_client(config):
+    # Prepare Yeepay virtual config
+    app_key = config.get("app_key", None)
+    endpoint = config.get("endpoint", None)
+    public_key = config.get("public_key", None)
+    private_key = config.get("private_key", None)
+    yconfig = {
+        "app_key": app_key,
+        "server_root": endpoint,
+        "yop_public_key": [{"value": public_key}],
+        "http_client": {},
+        "isv_private_key": [{"value": private_key}],
+    }
+
+    # Prepare Yeepay client with virtual configuration
+    with tempfile.NamedTemporaryFile(delete=True) as temp_file:
+        temp_file.write(json.dumps(yconfig).encode())
+        temp_file.seek(0)
+        client = YopClient(YopClientConfig(temp_file.name))
+
+    # Return Yeepay client
+    return client
+
+
 def yeepay_error(code):
     errors = {}
     errors["1120"] = "超过失败次数限制"
@@ -643,17 +669,19 @@ class PaymentRequest(CodenerixModel):
         _("Order Number"),
         blank=False,
         null=False,
-        validators=[MaxValueValidator(2821109907455)],
-    )  # 2821109907455 => codenerix::hex36 = 8 char
+        validators=[MaxValueValidator(78364164096)],
+    )
+    # 78364164096 => codenerix::hex36 = 7 char
+    # validators=[MaxValueValidator(2821109907455)],
     order_ref = models.CharField(
-        _("Order Reference"), max_length=8, blank=False, null=False
+        _("Order Reference"), max_length=7, blank=False, null=False
     )
     reverse = models.CharField(
         _("Reverse"),
         max_length=64,
         blank=False,
         null=False,
-        default="payments_reverse",
+        default="autorender",
     )
     currency = models.ForeignKey(
         Currency,
@@ -920,28 +948,11 @@ class PaymentRequest(CodenerixModel):
         # GET DETAILS
         # name = meta.get('name','')
         url = meta.get("url", "")  # URL when not using SSL
-        urlssl = meta.get("urlssl", "")  # URL when using SSL
-        ssl = meta.get("ssl", True)  # If the system can use SSL connections
-        sslvalid = meta.get(
-            "sslvalid", True
-        )  # If the certificate is valid officially
-
-        # Confirm/Cancel
-        if ssl:
-            urllink = urlssl
-        else:
-            urllink = url
-
-        # Success
-        if sslvalid:
-            urlsuccess = urllink
-        else:
-            urlsuccess = url
 
         # Prepare configuration
         code = config.get("merchant_code", "")
         authkey = base64.b64decode(config.get("auth_key", ""))
-        success_url = urlsuccess + reverse(
+        success_url = url + reverse(
             "payment_url",
             kwargs={"action": "success", "locator": self.locator},
         )
@@ -955,11 +966,11 @@ class PaymentRequest(CodenerixModel):
             cancel_url.replace("{action}", "cancel")
             cancel_url.replace("{locator}", self.locator)
         else:
-            return_url = urllink + reverse(
+            return_url = url + reverse(
                 "payment_url",
                 kwargs={"action": "confirm", "locator": self.locator},
             )
-            cancel_url = urllink + reverse(
+            cancel_url = url + reverse(
                 "payment_url",
                 kwargs={"action": "cancel", "locator": self.locator},
             )
@@ -1172,7 +1183,7 @@ class PaymentRequest(CodenerixModel):
         # Encode order reference
         ce = CodenerixEncoder()
         self.order_ref = ce.numeric_encode(
-            self.order, dic="hex36", length=8, cfill="A"
+            self.order, dic="hex36", length=7, cfill="A"
         )
 
         # Save the model like always
@@ -1248,14 +1259,7 @@ class PaymentRequest(CodenerixModel):
         # Get details
         client_id = config.get("id", None)
         client_secret = config.get("secret", None)
-        # If the system can use SSL connections
-        ssl = meta.get("ssl", True)
-        if ssl:
-            # URL when using SSL
-            url = meta.get("urlssl", "")
-        else:
-            # URL when not using SSL
-            url = meta.get("url", "")
+        url = meta.get("url", "")
 
         # Get reverse
         if self.reverse and self.reverse[:7] in ["http://", "https:/"]:
@@ -1340,21 +1344,9 @@ class PaymentRequest(CodenerixModel):
     def __save_yeepay(self, meta, config):
 
         # Get details
-        api_uri = config.get("api_uri", None)
         merchant_number = config.get("merchant_number", None)
-        endpoint = config.get("endpoint", None)
-        app_key = config.get("app_key", None)
-        public_key = config.get("public_key", None)
-        private_key = config.get("private_key", None)
-
-        # If the system can use SSL connections
-        ssl = meta.get("ssl", True)
-        if ssl:
-            # URL when using SSL
-            url = meta.get("urlssl", "")
-        else:
-            # URL when not using SSL
-            url = meta.get("url", "")
+        expire_minutes = config.get("expire_minutes", 120)
+        url = meta.get("url", "")
 
         # Get Success URL
         success_url = url + reverse(
@@ -1374,7 +1366,7 @@ class PaymentRequest(CodenerixModel):
             )
 
         # Request
-        expire = timezone.now() + datetime.timedelta(minutes=10)
+        expire = timezone.now() + datetime.timedelta(minutes=expire_minutes)
         request = {
             "parentMerchantNo": merchant_number,
             "merchantNo": merchant_number,
@@ -1385,7 +1377,7 @@ class PaymentRequest(CodenerixModel):
             "notifyUrl": success_url,
             "expiredTime": expire.isoformat(),
             "returnUrl": return_url,
-            "aggParam": '{"appId":"app_10090948273","openId":"zml_wechat","scene":{"WECHAT":"XIANXIA","ALIPAY":"XIANXIA"}}',
+            "aggParam": '{"scene":{"WECHAT":"XIANXIA"}}',
         }
 
         # Save request
@@ -1393,24 +1385,12 @@ class PaymentRequest(CodenerixModel):
         self.request_date = timezone.now()
         self.save()
 
-        # Prepare Yeepay virtual config
-        yconfig = {
-            "app_key": app_key,
-            "server_root": endpoint,
-            "yop_public_key": [{"value": public_key}],
-            "http_client": {},
-            "isv_private_key": [{"value": private_key}],
-        }
-
-        # Prepare Yeepay client with virtual configuration
-        with tempfile.NamedTemporaryFile(delete=True) as temp_file:
-            temp_file.write(json.dumps(yconfig).encode())
-            temp_file.seek(0)
-            client = YopClient(YopClientConfig(temp_file.name))
-
         # Create payment in Yeepay
+        client = yeepay_client(config)
         try:
-            answer = client.post(api=api_uri, post_params=request)
+            answer = client.post(
+                api="/rest/v1.0/cashier/unified/order", post_params=request
+            )
         except Exception as e:
             answer = None
             error = str(e)
@@ -1445,76 +1425,80 @@ class PaymentRequest(CodenerixModel):
         self.save()
 
     def notify(self, request, answer=None):
+        now = datetime.datetime.now()
         # with open("/tmp/codenerix_transaction.txt", "a") as F: # noqa: N806
         F = None  # noqa: N806
         if True:
             if F:
-                import datetime
-
-                now = datetime.datetime.now()
-                F.write("\n\n{} -     > NOTIFY FUNCTION\n".format(now))
+                F.write(f"\n\n{now} -     > NOTIFY FUNCTION\n")
             if self.reverse == "autorender":
-                func = resolve(
-                    reverse(
-                        "CNDX_payments_confirmation",
-                        kwargs={
-                            "locator": 0,
-                            "action": "success",
-                            "error": 0,
-                        },  # noqa: E501
-                    )
-                ).func
+                rev = "CNDX_payments_confirmation"
             else:
-                func = resolve(
+                rev = self.reverse
+
+            # Resolve reverse
+            try:
+                resolved = resolve(
                     reverse(
-                        self.reverse,
+                        rev,
                         kwargs={
                             "locator": 0,
                             "action": "success",
                             "error": 0,
                         },  # noqa: E501
                     )
-                ).func
+                )
+            except NoReverseMatch as e:
+                if F:
+                    F.write(f"{now} -     > EXCEPTION -> {str(e)}\n")
+                # Stop silently
+                print(f"{now} -     > EXCEPTION -> {str(e)}\n")
+                return
+
+            # Get function
+            func = resolved.func
 
             # Detect if it is class based view
-            module = func.__module__
-            name = func.__name__
-            mod = importlib.import_module(module)
-            cl = getattr(mod, name)
+            if hasattr(func, "view_class"):
+                cl = func.view_class
+                func = None
+            else:
+                cl = None
 
+            # Show details
             if F:
-                F.write("{} -     > DETAILS:\n".format(now))
-                F.write("{} -          module:{}\n".format(now, module))
-                F.write("{} -            name:{}\n".format(now, name))
-                F.write("{} -            func:{}\n".format(now, func))
-                F.write("{} -              cl:{}\n".format(now, cl))
+                F.write(f"{now} -     > DETAILS:\n")
+                F.write(f"{now} -              cl:{cl}\n")
+                F.write(f"{now} -            func:{func}\n")
                 F.flush()
 
             # Decide what to do
             try:
                 if F:
-                    F.write("{} -     > NOTIFY DECISION\n".format(now))
+                    F.write(f"{now} -     > NOTIFY DECISION\n")
                     F.flush()
-                if getattr(cl, "payment_paid", None):
-                    if F:
-                        F.write(
-                            "{} -     > NOTIFY PAID -> CLASS payment_paid({},{},{},{})\n".format(  # noqa: E501
-                                now, "request", self.pk, self.locator, 0
+
+                # If we have a class based view
+                if cl:
+                    if hasattr(cl, "payment_paid"):
+                        if F:
+                            F.write(
+                                f"{now} -     > NOTIFY PAID -> "
+                                f'CLASS payment_paid("request",'
+                                f"{self.locator},{answer})\n"
                             )
-                        )
-                        F.flush()
-                    cl().payment_paid(request, self.locator, answer)
+                            F.flush()
+                        cl().payment_paid(request, self.locator, answer)
+                    else:
+                        print(f"payment_paid() not handled by {cl}")
+
                 else:
+                    # If we have a function
                     if F:
                         F.write(
-                            "{} -     > NOTIFY PAID -> FUNCTION func({},{},{},{},{})\n".format(  # noqa: E501
-                                now,
-                                "request",
-                                "paid",
-                                self.pk,
-                                self.locator,
-                                0,
-                            )
+                            f"{now} -     > NOTIFY PAID -> "
+                            f'FUNCTION func("request","paid",'
+                            f"{self.locator}, 0)\n"
                         )
                         F.flush()
                     func(request, "paid", self.locator, answer, 0)
@@ -1525,55 +1509,66 @@ class PaymentRequest(CodenerixModel):
                     name = sys.exc_info()[0].__name__
                     err = sys.exc_info()[1]
                     trace = traceback.extract_tb(sys.exc_info()[2])
-                    error = "{}: {}".format(name, err)
+                    error = f"{name}: {err}"
                     for (filename, linenumber, affected, source) in trace:
                         error += (
-                            "\n  > Error in {} at {}:{} (source: {})".format(
-                                affected, filename, linenumber, source
-                            )
+                            f"\n  > Error in {affected} "
+                            f"at {filename}:{linenumber} (source: {source})"
                         )
 
                     # Prepare error
                     try:
-                        F.write(
-                            "{} -     > EXCEPTION -> {}\n".format(now, error)
-                        )
+                        F.write(f"{now} -     > EXCEPTION -> {error}\n")
                     except Exception:
-                        F.write("{} -     > EXCEPTION -> ???\n".format(now))
+                        F.write(f"{now} -     > EXCEPTION -> ???\n")
                 try:
-                    if getattr(cl, "payment_exception", None):
-                        if F:
-                            F.write(
-                                "{} -     > NOTIFY EXCEPTION -> CLASS payment_exception({},{},{},{})\n".format(  # noqa: E501
-                                    now,
-                                    "request",
-                                    self.pk,
-                                    self.locator,
-                                    error,
+
+                    # If we have a class based view
+                    if cl:
+                        if hasattr(cl, "payment_exception"):
+                            if F:
+                                F.write(
+                                    f"{now} -     > NOTIFY EXCEPTION -> "
+                                    f'CLASS payment_exception("request",'
+                                    f"{self.locator},{error})\n"
                                 )
+                                F.flush()
+                            cl().payment_exception(
+                                request, self.locator, answer, error
                             )
-                            F.flush()
-                        cl().payment_exception(
-                            request, self.locator, answer, error
-                        )
+                        else:
+                            print(f"payment_exception() not handled by {cl}")
                     else:
+                        # If we have a function
                         if F:
                             F.write(
-                                "{} -     > NOTIFY EXCEPTION -> FUNCTION func({},{},{},{},{})\n".format(  # noqa: E501
-                                    now,
-                                    "request",
-                                    "exception",
-                                    self.pk,
-                                    self.locator,
-                                    error,
-                                )
+                                f"{now} -     > NOTIFY EXCEPTION -> "
+                                f'FUNCTION func("request","exception",'
+                                f"{self.locator},{answer},{error})\n"
                             )
                             F.flush()
                         func(
                             request, "exception", self.locator, answer, error
                         )  # noqa: E501
                 except Exception:
-                    pass
+                    # Get traceback
+                    name = sys.exc_info()[0].__name__
+                    err = sys.exc_info()[1]
+                    trace = traceback.extract_tb(sys.exc_info()[2])
+                    error = f"{name}: {err}"
+                    for (filename, linenumber, affected, source) in trace:
+                        error += (
+                            f"\n  > Error in {affected} "
+                            f"at {filename}:{linenumber} "
+                            f"(source: {source})"
+                        )
+                    if F:
+                        # Prepare error
+                        try:
+                            F.write(f"{now} -     > EXCEPTION -> {error}\n")
+                        except Exception:
+                            F.write(f"{now} -     > EXCEPTION -> ???\n")
+                    print(f"{now} -     > EXCEPTION -> {error}\n")
 
 
 class PaymentConfirmation(CodenerixModel):
@@ -1905,21 +1900,29 @@ class PaymentConfirmation(CodenerixModel):
         # data_src es el valor de recibido en $_SERVER["QUERY_STRING"]
         data_src = request.META.get("QUERY_STRING", "")
         # signature_src es el valor recibido en $_REQUEST['signature']
-        signature_src = data.get("signature", None)
+        signature = data.get("sign", None)
 
-        if signature_src is not None:
+        if signature is not None:
 
             # cogemos los datos hasta &signature=
-            pos = data_src.index("&signature=")
+            pos = data_src.index("&sign=")
             data = data_src[:pos]
 
-            # cogemos los datos hasta el caracter $ de la cadena $SHA256
-            separador = signature_src.index("$")
-            sign = signature_src[:separador]
+            # Recover character for B64 and recover padding
+            # signature = signature.replace("-", "+").replace(
+            # "_", "/") + "=" * (
+            #     -len(signature) % 4
+            # )
 
-            encryptor = RsaEncryptor(config.get("public_key", None))
+            public_key = config.get("public_key", None)
+            public_key_imported = RSA.import_key(
+                "-----BEGIN PUBLIC KEY-----\n"
+                + public_key
+                + "\n-----END PUBLIC KEY-----"
+            )
+            encryptor = RsaEncryptor(public_key=public_key_imported)
 
-            if encryptor.verify_signature(data, sign):
+            if encryptor.verify_signature(data, signature):
 
                 if self.action == "confirm":
                     # Check if there is at least one remote confirmation for
@@ -1956,11 +1959,59 @@ class PaymentConfirmation(CodenerixModel):
         else:
 
             if self.action == "cancel":
+
+                # Find unique order number
+                try:
+                    answer = json.loads(self.payment.answer)
+                except Exception:
+                    answer = None
+                if answer:
+                    unique_order_no = answer.get("result", {}).get(
+                        "uniqueOrderNo", None
+                    )
+                else:
+                    unique_order_no = None
+
+                # Check if we have a unique order number
+                if unique_order_no:
+
+                    # Notify Yeepay
+                    merchant_number = config.get("merchant_number", None)
+                    request = {
+                        "orderId": self.payment.order_ref,
+                        "uniqueOrderNo": unique_order_no,
+                        "parentMerchantNo": merchant_number,
+                        "merchantNo": merchant_number,
+                    }
+                    client = yeepay_client(config)
+                    try:
+                        answer = client.post(
+                            api="/rest/v1.0/trade/order/close",
+                            post_params=request,
+                        )
+                    except Exception as e:
+                        answer = None
+                        error = str(e)
+
+                    # Analize answer
+                    if answer:
+                        code = answer.get("result", {}).get("code", None)
+                        message = answer.get("result", {}).get("message", None)
+                        if code != "OPR0000" or message != "成功":
+                            error = (
+                                1,
+                                _(
+                                    f"Yeepay cancel error: code={code} "
+                                    f"message={message}"
+                                ),
+                            )
+
                 # Cancel payment
                 pr.cancelled = True
                 pr.save()
                 # Remember payment confirmation for future reference
                 self.save()
+
             else:
                 error = (1, _("Not signed"))
 
@@ -2207,9 +2258,13 @@ class PaymentAnswer(CodenerixModel):
         return super(PaymentAnswer, self).save()
 
     def success(self, pr, data, request):
+
         # Got a success payment
         pr.cancelled = False
         pr.save()
+
+        # Prepare defatuls answer
+        answer = {"result": "KO"}
 
         # Check payment status
         pa = pr.paymentanswers.filter(ref__isnull=False, error=False)
@@ -2223,9 +2278,6 @@ class PaymentAnswer(CodenerixModel):
             self.request = json.dumps(data)
             self.request_date = timezone.now()
             self.save()
-
-            # Prepare defatuls answer
-            answer = {"result": "KO"}
 
             # Check for errors
             error = None
@@ -2282,7 +2334,7 @@ class PaymentAnswer(CodenerixModel):
                                 "Ds_AuthorisationCode", None
                             ).strip()
 
-                            # Check if payment is ready for fonfirmation
+                            # Check if payment is ready for confirmation
                             if amount and authorisation:
 
                                 if float(amount) / 100 == self.payment.total:
@@ -2384,12 +2436,26 @@ class PaymentAnswer(CodenerixModel):
 
                     config = settings.PAYMENTS.get(pr.protocol, {})
 
-                    if customer_id == config.get("merchant_number", False):
+                    if customer_id == config.get("app_key", False):
                         private_key = config.get("private_key", None)
+                        private_key_imported = RSA.import_key(
+                            "-----BEGIN PRIVATE KEY-----\n"
+                            + private_key
+                            + "\n-----END PRIVATE KEY-----"
+                        )
                         public_key = config.get("public_key", None)
-                        encryptor = RsaEncryptor(private_key, public_key)
+                        public_key_imported = RSA.import_key(
+                            "-----BEGIN PUBLIC KEY-----\n"
+                            + public_key
+                            + "\n-----END PUBLIC KEY-----"
+                        )
+
+                        encryptor = RsaEncryptor(
+                            private_key=private_key_imported,
+                            public_key=public_key_imported,
+                        )
                         try:
-                            infotxt = encryptor.envelop_decrypt(response)
+                            infotxt = encryptor.envelope_decrypt(response)
                         except Exception:
                             infotxt = None
                         if infotxt:
@@ -2409,12 +2475,7 @@ class PaymentAnswer(CodenerixModel):
 
                                 # Get retCode
                                 errorcode = info.get("retCode", None)
-                                if errorcode is None:
-                                    error = (
-                                        6,
-                                        _("Missing retCode in your request"),
-                                    )
-                                elif errorcode != "0000":
+                                if errorcode:
                                     # Error code
                                     self.ref = errorcode
                                     answer["errorcode"] = errorcode
@@ -2423,10 +2484,10 @@ class PaymentAnswer(CodenerixModel):
 
                                     # Check for fields existance
                                     for field in [
-                                        "amount",
-                                        "externalNo",
-                                        "customerRequestNo",
-                                        "customerNo",
+                                        "merchantNo",
+                                        "orderAmount",
+                                        "uniqueOrderNo",
+                                        "orderId",
                                         "status",
                                     ]:
                                         if field not in info:
@@ -2448,31 +2509,33 @@ class PaymentAnswer(CodenerixModel):
                                             pr.order_ref
                                         )
                                         try:
-                                            customer_no = int(
-                                                info["customerNo"]
+                                            merchant_num = str(
+                                                info["merchantNo"]
                                             )
                                         except ValueError:
-                                            customer_no = None
+                                            merchant_num = None
                                         try:
-                                            amount = Decimal(info["amount"])
+                                            amount = Decimal(
+                                                info["orderAmount"]
+                                            )
                                         except InvalidOperation:
                                             amount = None
-                                        external_no = info["externalNo"]
+                                        unique_order = info["uniqueOrderNo"]
 
                                         if (
-                                            info["customerRequestNo"]
+                                            info["orderId"]
                                             != local_customer_request_no
                                         ):
                                             error = (
                                                 3,
-                                                _("customerRequestNo invalid"),
+                                                _("orderId invalid"),
                                             )
-                                        elif customer_no != config.get(
-                                            "customerNo", None
+                                        elif merchant_num != config.get(
+                                            "merchant_number", None
                                         ):
                                             error = (
                                                 3,
-                                                _("customerNo invalid"),
+                                                _("merchantNo invalid"),
                                             )
                                         elif info["status"] != "SUCCESS":
                                             error = (
@@ -2481,18 +2544,21 @@ class PaymentAnswer(CodenerixModel):
                                             )
                                         elif amount != pr.total:
                                             error = (3, _("Amount invalid"))
-                                        elif external_no == "":
-                                            error = (3, _("externalNo empty"))
+                                        elif unique_order == "":
+                                            error = (
+                                                3,
+                                                _("uniqueOrderNo empty"),
+                                            )
 
                                         if not error:
                                             # Everything is fine, payer
                                             # verified and payment authorized
-                                            self.ref = external_no
+                                            self.ref = unique_order
                                             self.error = False
                                             self.error_txt = None
                                             self.save()
 
-                                        # Everything whent fine
+                                        # Everything went fine
                                         answer["result"] = "OK"
 
                             else:
@@ -2509,12 +2575,7 @@ class PaymentAnswer(CodenerixModel):
                         else:
                             error = (9, "Decryption error")
                     else:
-                        error = (
-                            3,
-                            _("Customer id unknown").format(
-                                missing=", ".join(missing)
-                            ),
-                        )
+                        error = (3, _("Customer id unknown"))
                 else:
                     missing = []
                     if customer_id is None:
@@ -2560,10 +2621,15 @@ class PaymentAnswer(CodenerixModel):
 
             # Save result and return an answer
             self.save()
-            return answer
 
         else:
-            raise PaymentError(7, _("Payment already processed"))
+            if pr.protocol == "yeepay":
+                answer["result"] = "ALREADY_OK"
+            else:
+                raise PaymentError(7, _("Payment already processed"))
+
+        # Return answer
+        return answer
 
 
 class PaymentError(Exception):
