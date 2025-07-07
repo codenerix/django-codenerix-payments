@@ -13,6 +13,6 @@ class Migration(migrations.Migration):
         migrations.AlterField(
             model_name="paymentrequest",
             name="order_ref",
-            field=models.CharField(max_length=7, verbose_name="Order Reference"),
+            field=models.CharField(max_length=8, verbose_name="Order Reference"),
         ),
     ]

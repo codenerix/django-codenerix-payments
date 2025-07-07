@@ -674,7 +674,7 @@ class PaymentRequest(CodenerixModel):
     # 78364164096 => codenerix::hex36 = 7 char
     # validators=[MaxValueValidator(2821109907455)],
     order_ref = models.CharField(
-        _("Order Reference"), max_length=7, blank=False, null=False
+        _("Order Reference"), max_length=8, blank=False, null=False
     )
     reverse = models.CharField(
         _("Reverse"),
