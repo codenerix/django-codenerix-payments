@@ -6,6 +6,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [4.0.6] - 2025-08-04
+### Bugfix
+- order_ref recalculated after saving the PaymentRequest if auto_set_order is enabled
+
 ## [4.0.5] - 2025-07-07
 ### Bugfix
 - order_ref field corrected to 8 bytes

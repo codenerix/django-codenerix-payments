@@ -29,7 +29,6 @@ import paypalrestsdk  # type: ignore
 import hashlib
 import base64
 import time
-import datetime
 import requests
 import math
 from decimal import Decimal, InvalidOperation
@@ -1175,23 +1174,33 @@ class PaymentRequest(CodenerixModel):
                     ),
                 )
 
+        # Prepare CodenerixEncoder
+        ce = CodenerixEncoder()
+
         # If no orther specified
         auto_set_order = not self.order
         if auto_set_order:
+            # No order number yet
             self.order = 0
-
-        # Encode order reference
-        ce = CodenerixEncoder()
-        self.order_ref = ce.numeric_encode(
-            self.order, dic="hex36", length=7, cfill="A"
-        )
+        else:
+            # Encode order reference
+            self.order_ref = ce.numeric_encode(
+                self.order, dic="hex36", length=7, cfill="A"
+            )
 
         # Save the model like always
-        m = super(PaymentRequest, self).save(*args, **kwargs)
+        m = super().save(*args, **kwargs)
 
         # Autoset order
         if auto_set_order:
+
+            # Set order number
             self.order = self.pk
+
+            # Encode order reference
+            self.order_ref = ce.numeric_encode(
+                self.pk, dic="hex36", length=7, cfill="A"
+            )
 
         # Execute specific actions for the payment system
         if new:
