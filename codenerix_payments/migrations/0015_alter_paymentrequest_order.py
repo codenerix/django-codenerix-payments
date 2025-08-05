@@ -5,7 +5,6 @@ from django.db import migrations, models
 
 
 class Migration(migrations.Migration):
-
     dependencies = [
         ("codenerix_payments", "0014_alter_paymentrequest_order_ref"),
     ]
@@ -15,7 +14,9 @@ class Migration(migrations.Migration):
             model_name="paymentrequest",
             name="order",
             field=models.PositiveIntegerField(
-                validators=[django.core.validators.MaxValueValidator(78364164096)],
+                validators=[
+                    django.core.validators.MaxValueValidator(78364164096),
+                ],
                 verbose_name="Order Number",
             ),
         ),

@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 #
 # django-codenerix-payments
 #
@@ -21,24 +20,22 @@
 
 import time
 
+from codenerix_lib.debugger import Debugger
 from django.core.management.base import BaseCommand, CommandError
 
-from codenerix_lib.debugger import Debugger
-from codenerix_payments.models import (
-    PaymentRequest,
-    PaymentConfirmation,
+from codenerix_payments.models import (  # type:ignore
     Currency,
+    PaymentConfirmation,
     PaymentError,
+    PaymentRequest,
 )
 
 
 class Command(BaseCommand, Debugger):
-
     # Show this when the user types help
     help = "Check paypal library and configuration"
 
     def add_arguments(self, parser):
-
         # Named (optional) arguments
         parser.add_argument(
             "--action",
@@ -66,7 +63,6 @@ class Command(BaseCommand, Debugger):
         )
 
     def handle(self, *args, **options):
-
         # Autoconfigure Debugger
         self.set_name("PAYPAL")
         self.set_debug()
@@ -83,11 +79,11 @@ class Command(BaseCommand, Debugger):
                 if action not in ["create", "confirm", "cancel"]:
                     raise CommandError(
                         f"Unknow action '{action}', you can use 'create', "
-                        "'confirm' or 'cancel'"
+                        "'confirm' or 'cancel'",
                     )
             if "confirm" in actions and "cancel" in actions:
                 raise CommandError(
-                    "Cannot confirm and cancel at the same time"
+                    "Cannot confirm and cancel at the same time",
                 )
             for action in ["confirm", "cancel"]:
                 if action in actions:
@@ -112,8 +108,8 @@ class Command(BaseCommand, Debugger):
         elif len(cs) == 1:
             currency = cs[0]
         else:
-            raise IOError(
-                "Currency {} found more than once".format(currency_id)
+            raise OSError(
+                "Currency {} found more than once".format(currency_id),
             )
 
         # Payment Request
@@ -135,7 +131,8 @@ class Command(BaseCommand, Debugger):
                 )
             except PaymentError as e:
                 self.debug(
-                    "Payment Request: ERROR - {}".format(e), color="red"
+                    "Payment Request: ERROR - {}".format(e),
+                    color="red",
                 )
                 raise
         else:
@@ -158,7 +155,8 @@ class Command(BaseCommand, Debugger):
                     )
                 except PaymentError as e:
                     self.debug(
-                        "Approval URL: ERROR - {}".format(e), color="red"
+                        "Approval URL: ERROR - {}".format(e),
+                        color="red",
                     )
                     raise
 
@@ -168,7 +166,7 @@ class Command(BaseCommand, Debugger):
                     confirmation = options["url"]
                     self.debug(
                         "Using confirmation URL from command line: {}".format(
-                            confirmation
+                            confirmation,
                         ),
                         color="yellow",
                     )
@@ -186,7 +184,6 @@ class Command(BaseCommand, Debugger):
                 if (len(confirmation.split("?")) > 1) and (
                     len(confirmation.split("/")) > 1
                 ):
-
                     # Process the confirmation URL
                     data = {}
                     for arg in confirmation.split("?")[1].split("&"):
@@ -202,7 +199,7 @@ class Command(BaseCommand, Debugger):
                                 "payment action but URL you gave me was for "
                                 "a confirm payment: 1) or you gave me a "
                                 "mistaken URL, 2) or you told me to do a "
-                                "wrong action"
+                                "wrong action",
                             )
                     elif action == "cancel":
                         if (not alloptions) and ("cancel" not in actions):
@@ -210,12 +207,12 @@ class Command(BaseCommand, Debugger):
                                 "This is not a cancel payment action but the "
                                 "URL you gave me was for a cancel payment: 1) "
                                 "or you gave me a mistaken URL, 2) or you "
-                                "told me to do a wrong action"
+                                "told me to do a wrong action",
                             )
                     else:
                         raise CommandError(
                             "The URL that you gave me is not for a 'confirm' "
-                            "neither 'cancel' payment"
+                            "neither 'cancel' payment",
                         )
 
                     # Payment Confirm or Cancel
@@ -246,9 +243,10 @@ class Command(BaseCommand, Debugger):
                             raise
                 else:
                     self.debug(
-                        "No URL given: stopping process here", color="yellow"
+                        "No URL given: stopping process here",
+                        color="yellow",
                     )
         else:
             raise CommandError(
-                "This payment has been cancelled previously, sorry!"
+                "This payment has been cancelled previously, sorry!",
             )

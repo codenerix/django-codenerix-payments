@@ -4,7 +4,6 @@ from django.db import migrations, models
 
 
 class Migration(migrations.Migration):
-
     dependencies = [
         ("codenerix_payments", "0010_auto_20200706_1032"),
     ]
@@ -14,7 +13,9 @@ class Migration(migrations.Migration):
             model_name="currency",
             name="price",
             field=models.DecimalField(
-                decimal_places=2, max_digits=10, verbose_name="Price"
+                decimal_places=2,
+                max_digits=10,
+                verbose_name="Price",
             ),
         ),
         migrations.AlterField(
@@ -26,7 +27,9 @@ class Migration(migrations.Migration):
             model_name="paymentrequest",
             name="total",
             field=models.DecimalField(
-                decimal_places=2, max_digits=10, verbose_name="Total"
+                decimal_places=2,
+                max_digits=10,
+                verbose_name="Total",
             ),
         ),
     ]

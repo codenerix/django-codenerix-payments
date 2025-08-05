@@ -6,6 +6,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [4.0.7] - 2025-08-05
+### Bugfix
+- Resolved an issue with Yeepay payment with the digital signature that prevented to sucessfully confirm the payment to the final user
+- Locator updated to 64 bytes and algorithm updated from SHA-1 to SHA3-256
+- Added pre-commit hooks to ensure code quality
+
 ## [4.0.6] - 2025-08-04
 ### Bugfix
 - order_ref recalculated after saving the PaymentRequest if auto_set_order is enabled

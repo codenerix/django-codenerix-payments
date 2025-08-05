@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 #
 # django-codenerix-payments
 #
@@ -26,29 +25,27 @@
 # CIP: 123456
 
 import os
-import time
-import commands  # type: ignore
 import tempfile
+import time
 
+import commands  # type: ignore
+from codenerix_lib.debugger import Debugger
 from django.core.management.base import BaseCommand, CommandError
 
-from codenerix_lib.debugger import Debugger
-from codenerix_payments.models import (
-    PaymentRequest,
-    PaymentConfirmation,
-    PaymentAnswer,
+from codenerix_payments.models import (  # type: ignore
     Currency,
+    PaymentAnswer,
+    PaymentConfirmation,
     PaymentError,
+    PaymentRequest,
 )
 
 
 class Command(BaseCommand, Debugger):
-
     # Show this when the user types help
     help = "Check Redsys library and configuration"
 
     def add_arguments(self, parser):
-
         # Named (optional) arguments
         parser.add_argument(
             "--action",
@@ -76,7 +73,6 @@ class Command(BaseCommand, Debugger):
         )
 
     def handle(self, *args, **options):
-
         # Autoconfigure Debugger
         self.set_name("REDSYS")
         self.set_debug()
@@ -93,11 +89,11 @@ class Command(BaseCommand, Debugger):
                 if action not in ["create", "success", "confirm", "cancel"]:
                     raise CommandError(
                         f"Unknow action '{action}', you can use 'create', "
-                        "'success', 'confirm' or 'cancel'"
+                        "'success', 'confirm' or 'cancel'",
                     )
             if "confirm" in actions and "cancel" in actions:
                 raise CommandError(
-                    "Cannot confirm and cancel at the same time"
+                    "Cannot confirm and cancel at the same time",
                 )
             for action in ["success", "confirm", "cancel"]:
                 if action in actions:
@@ -122,8 +118,8 @@ class Command(BaseCommand, Debugger):
         elif len(cs) == 1:
             currency = cs[0]
         else:
-            raise IOError(
-                "Currency {} found more than once".format(currency_id)
+            raise OSError(
+                "Currency {} found more than once".format(currency_id),
             )
 
         # Payment Request
@@ -145,7 +141,8 @@ class Command(BaseCommand, Debugger):
                 )
             except PaymentError as e:
                 self.debug(
-                    "Payment Request: ERROR - {}".format(e), color="red"
+                    "Payment Request: ERROR - {}".format(e),
+                    color="red",
                 )
                 raise
         else:
@@ -168,7 +165,8 @@ class Command(BaseCommand, Debugger):
                     )
                 except PaymentError as e:
                     self.debug(
-                        "Approval URL: ERROR - {}".format(e), color="red"
+                        "Approval URL: ERROR - {}".format(e),
+                        color="red",
                     )
                     raise
 
@@ -178,7 +176,7 @@ class Command(BaseCommand, Debugger):
                     confirmation = options["url"]
                     self.debug(
                         "Using confirmation URL from command line: {}".format(
-                            confirmation
+                            confirmation,
                         ),
                         color="yellow",
                     )
@@ -189,13 +187,15 @@ class Command(BaseCommand, Debugger):
 
                     # Create a temporal filename
                     (fd, filename) = tempfile.mkstemp(
-                        suffix=".html", prefix="pay_", text=True
+                        suffix=".html",
+                        prefix="pay_",
+                        text=True,
                     )
 
                     # Write to disk
                     fp = open(filename, "w")
                     fp.write(
-                        '<form action="' + info["url"] + '" method="POST">'
+                        '<form action="' + info["url"] + '" method="POST">',
                     )
                     for key in info["form"]:
                         fp.write(
@@ -203,7 +203,7 @@ class Command(BaseCommand, Debugger):
                             + key
                             + '" value="'
                             + info["form"][key]
-                            + '"/>'
+                            + '"/>',
                         )
                     fp.write('<input type="submit" value="PAGAR!">')
                     fp.write("</form>")
@@ -211,8 +211,8 @@ class Command(BaseCommand, Debugger):
                     os.close(fd)
 
                     # Call browser
-                    commands.getstatusoutput(
-                        "google-chrome {}".format(filename)
+                    commands.getstatusoutput(  # nosec B605
+                        "google-chrome {}".format(filename),
                     )
                     input("When you are ready to keep going, hit enter!")
 
@@ -231,7 +231,6 @@ class Command(BaseCommand, Debugger):
                 if (len(confirmation.split("?")) > 1) and (
                     len(confirmation.split("/")) > 1
                 ):
-
                     # Get args
                     url = confirmation.split("?")[0]
                     args = confirmation.split("?")[1]
@@ -253,7 +252,7 @@ class Command(BaseCommand, Debugger):
                                 "payment action but URL you gave me was "
                                 "for a success payment: 1) or you gave me "
                                 "a mistaken URL, 2) or you told me to do "
-                                "a wrong action"
+                                "a wrong action",
                             )
                     elif action == "confirm":
                         if (not alloptions) and ("confirm" not in actions):
@@ -262,7 +261,7 @@ class Command(BaseCommand, Debugger):
                                 "payment action but URL you gave me was "
                                 "for a success payment: 1) or you gave me "
                                 "a mistaken URL, 2) or you told me to do "
-                                "a wrong action"
+                                "a wrong action",
                             )
                     elif action == "cancel":
                         if (not alloptions) and ("cancel" not in actions):
@@ -270,12 +269,12 @@ class Command(BaseCommand, Debugger):
                                 "This is not a cancel payment action but "
                                 "the URL you gave me was for a cancel "
                                 "payment: 1) or you gave me a mistaken "
-                                "URL, 2) or you told me to do a wrong action"
+                                "URL, 2) or you told me to do a wrong action",
                             )
                     else:
                         raise CommandError(
                             "The URL that you gave me is not for a 'success' "
-                            "neither 'cancel' payment"
+                            "neither 'cancel' payment",
                         )
 
                     # Payment Confirm or Cancel
@@ -306,7 +305,8 @@ class Command(BaseCommand, Debugger):
                             raise
                 else:
                     self.debug(
-                        "No URL given: stopping process here", color="yellow"
+                        "No URL given: stopping process here",
+                        color="yellow",
                     )
 
             elif action == "success":
@@ -314,10 +314,10 @@ class Command(BaseCommand, Debugger):
                 pa = PaymentAnswer()
                 data = {
                     "Ds_Signature": [
-                        "cURiymdHBZof0dhnWCHki7muP59t9o5SNJy5nVLrGew="
+                        "cURiymdHBZof0dhnWCHki7muP59t9o5SNJy5nVLrGew=",
                     ],
                     "Ds_MerchantParameters": [
-                        "eyJEc19EYXRlIjoiMjNcLzA4XC8yMDE2IiwiRHNfSG91ciI6IjE3OjUyIiwiRHNfU2VjdXJlUGF5bWVudCI6IjEiLCJEc19DYXJkX051bWJlciI6IjQ1NDg4MSoqKioqKjAwMDQiLCJEc19DYXJkX0NvdW50cnkiOiI3MjQiLCJEc19BbW91bnQiOiIxMjAwIiwiRHNfQ3VycmVuY3kiOiI5NzgiLCJEc19PcmRlciI6IjAwMDAwMDE1IiwiRHNfTWVyY2hhbnRDb2RlIjoiOTk5MDA4ODgxIiwiRHNfVGVybWluYWwiOiIwMDEiLCJEc19SZXNwb25zZSI6IjAwMDAiLCJEc19NZXJjaGFudERhdGEiOiIiLCJEc19UcmFuc2FjdGlvblR5cGUiOiIwIiwiRHNfQ29uc3VtZXJMYW5ndWFnZSI6IjEiLCJEc19BdXRob3Jpc2F0aW9uQ29kZSI6IjYyOTE3OCJ9"  # noqa: E501
+                        "eyJEc19EYXRlIjoiMjNcLzA4XC8yMDE2IiwiRHNfSG91ciI6IjE3OjUyIiwiRHNfU2VjdXJlUGF5bWVudCI6IjEiLCJEc19DYXJkX051bWJlciI6IjQ1NDg4MSoqKioqKjAwMDQiLCJEc19DYXJkX0NvdW50cnkiOiI3MjQiLCJEc19BbW91bnQiOiIxMjAwIiwiRHNfQ3VycmVuY3kiOiI5NzgiLCJEc19PcmRlciI6IjAwMDAwMDE1IiwiRHNfTWVyY2hhbnRDb2RlIjoiOTk5MDA4ODgxIiwiRHNfVGVybWluYWwiOiIwMDEiLCJEc19SZXNwb25zZSI6IjAwMDAiLCJEc19NZXJjaGFudERhdGEiOiIiLCJEc19UcmFuc2FjdGlvblR5cGUiOiIwIiwiRHNfQ29uc3VtZXJMYW5ndWFnZSI6IjEiLCJEc19BdXRob3Jpc2F0aW9uQ29kZSI6IjYyOTE3OCJ9",  # noqa: E501
                     ],
                     "Ds_SignatureVersion": ["HMAC_SHA256_V1"],
                 }
@@ -345,5 +345,5 @@ class Command(BaseCommand, Debugger):
 
         else:
             raise CommandError(
-                "This payment has been cancelled previously, sorry!"
+                "This payment has been cancelled previously, sorry!",
             )

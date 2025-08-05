@@ -4,22 +4,30 @@ from django.db import migrations, models
 
 
 class Migration(migrations.Migration):
-
     dependencies = [
-        ("codenerix_payments", "0012_alter_currency_price_alter_paymentrequest_total"),
+        (
+            "codenerix_payments",
+            "0012_alter_currency_price_alter_paymentrequest_total",
+        ),
     ]
 
     operations = [
         migrations.AlterField(
             model_name="paymentrequest",
             name="feedback",
-            field=models.JSONField(blank=True, null=True, verbose_name="Feedback"),
+            field=models.JSONField(
+                blank=True,
+                null=True,
+                verbose_name="Feedback",
+            ),
         ),
         migrations.AlterField(
             model_name="paymentrequest",
             name="reverse",
             field=models.CharField(
-                default="payments_reverse", max_length=64, verbose_name="Reverse"
+                default="payments_reverse",
+                max_length=64,
+                verbose_name="Reverse",
             ),
         ),
     ]

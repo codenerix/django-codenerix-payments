@@ -1,4 +1,5 @@
 import os
+
 from setuptools import setup
 
 import codenerix_payments
@@ -16,7 +17,8 @@ setup(
     include_package_data=True,
     zip_safe=False,
     license="Apache License Version 2.0",
-    description="Codenerix Payments is a module that enables CODENERIX to manage payments and let clients to pay online.",
+    description="Codenerix Payments is a module that enables CODENERIX "
+    "to manage payments and let clients to pay online.",
     long_description=README,
     url="https://github.com/codenerix/django-codenerix-payments",
     author=", ".join(codenerix_payments.__authors__),
@@ -51,5 +53,6 @@ setup(
         "oss2",
         "rsa",
         "yop-python-sdk>=4.3.0",
+        "cryptography",
     ],
 )

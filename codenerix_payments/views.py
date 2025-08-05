@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 #
 # django-codenerix-payments
 #
@@ -19,42 +18,44 @@
 # limitations under the License.
 
 import json
-
-from django.views.generic import View
-from django.urls import reverse
-from django.utils.decorators import method_decorator
-from django.views.decorators.csrf import csrf_exempt
-from django.http import HttpResponse, HttpResponseRedirect
-from django.utils.translation import gettext_lazy as _, gettext as __
-from django.contrib.auth.decorators import login_required
-from django.conf import settings
-from django.shortcuts import get_object_or_404
-from django.shortcuts import render
+import logging
 
 from codenerix.helpers import get_client_ip  # type: ignore
 from codenerix.views import (  # type: ignore
-    GenList,
-    GenDetail,
     GenCreate,
     GenCreateModal,
+    GenDelete,
+    GenDetail,
+    GenForeignKey,
+    GenList,
     GenUpdate,
     GenUpdateModal,
-    GenDelete,
-    GenForeignKey,
 )
+from django.conf import settings
+from django.contrib.auth.decorators import login_required
+from django.http import HttpResponse, HttpResponseRedirect
+from django.shortcuts import get_object_or_404, render
+from django.urls import reverse
+from django.utils.decorators import method_decorator
+from django.utils.translation import gettext as __
+from django.utils.translation import gettext_lazy as _
+from django.views.decorators.csrf import csrf_exempt
+from django.views.generic import View
 
-from codenerix_payments.models import (
-    PaymentRequest,
-    PaymentConfirmation,
-    PaymentAnswer,
-    PaymentError,
-    Currency,
-)
 from codenerix_payments.forms import (
+    CurrencyForm,
     PaymentRequestForm,
     PaymentRequestUpdateForm,
-    CurrencyForm,
 )
+from codenerix_payments.models import (  # type: ignore
+    Currency,
+    PaymentAnswer,
+    PaymentConfirmation,
+    PaymentError,
+    PaymentRequest,
+)
+
+logger = logging.getLogger(__name__)
 
 
 class CurrencyList(GenList):
@@ -108,13 +109,13 @@ class PaymentRequestList(GenList):
             "cancelurl": reverse(
                 "payment_url",
                 kwargs={"action": "cancel", "locator": "LOCATOR"},
-            )
+            ),
         }
         if getattr(settings, "CDNX_PAYMENTS_REQUEST_PAY", False):
             self.static_partial_row = (
                 "codenerix_payments/partials/paymentslist_rows.html"
             )
-        return super(PaymentRequestList, self).dispatch(*args, **kwargs)
+        return super().dispatch(*args, **kwargs)
 
 
 class PaymentRequestCreate(GenCreate):
@@ -122,7 +123,6 @@ class PaymentRequestCreate(GenCreate):
     form_class = PaymentRequestForm
 
     def form_valid(self, form):
-
         # Get selected platform
         platform = form.cleaned_data["platform"]
 
@@ -136,7 +136,7 @@ class PaymentRequestCreate(GenCreate):
             if not currency:
                 currency = Currency()
                 currency.name = "Euro"
-                currency.symbol = "€".encode("utf-8")
+                currency.symbol = "€".encode()
                 currency.iso4217 = "EUR"
                 currency.price = 1.0
                 currency.save()
@@ -153,7 +153,7 @@ class PaymentRequestCreate(GenCreate):
         form.instance.protocol = profile["protocol"]
 
         # Let Django finish the job
-        return super(PaymentRequestCreate, self).form_valid(form)
+        return super().form_valid(form)
 
 
 class PaymentRequestCreateModal(GenCreateModal, PaymentRequestCreate):
@@ -209,7 +209,7 @@ class PaymentRequestDetail(GenDetail):
         if locator:
             return get_object_or_404(self.get_queryset(), locator=locator)
         else:
-            return super(PaymentRequestDetail, self).get_object()
+            return super().get_object()
 
 
 class PaymentRequestDelete(GenDelete):
@@ -248,7 +248,7 @@ class PaymentPlatforms(GenForeignKey):
                 "clear": [],
                 "rows": answer,
                 "readonly": [],
-            }
+            },
         )
 
         # Return response
@@ -355,7 +355,11 @@ class PaymentAction(View):
             #    F.write("{} - PR NOT FOUND!\n")
 
             # Prepare answer
-            answer = {"action": action, "locator": locator, "error": 0}
+            answer = {
+                "action": action,
+                "locator": locator,
+                "error": 0,
+            }
 
             # Set the kind of answer (if the reverse string is 'reverse', JSON
             # will be used)
@@ -364,10 +368,8 @@ class PaymentAction(View):
 
             # Check if we found the payment request
             if pr:
-
                 # --- PAYPAL ---
                 if pr.protocol == "paypal":
-
                     if action == "confirm":
                         pc = PaymentConfirmation()
                         # pc.ip = get_client_ip(self.request)
@@ -393,12 +395,14 @@ class PaymentAction(View):
                         # ERROR: Unknown action for paypal (only allowed
                         # 'confirm' or 'cancel'
                         answer["error"] = "P004"
+                        logger.error(
+                            f"P004: Unknown action '{action}' for "
+                            f"PaymentRequest with locator '{locator}'.",
+                        )
 
                 # --- REDSYS / REDSYSXML ---
                 elif pr.protocol in ["redsys", "redsysxml"]:
-
                     if action == "success":
-
                         # F.write("{} - SUCCESS\n".format(now))
                         # This answer must be in JSON format
                         answer_json = True
@@ -444,12 +448,14 @@ class PaymentAction(View):
                         # ERROR: Unknown action for redsys/redsysxml (only
                         # allowed 'success', 'confirm' or 'cancel'
                         answer["error"] = "P003"
+                        logger.error(
+                            f"P003: Unknown action '{action}' for "
+                            f"PaymentRequest with locator '{locator}'.",
+                        )
 
                 # --- YEEPAY ---
                 elif pr.protocol == "yeepay":
-
                     if action == "success":
-
                         # F.write("{} - SUCCESS\n".format(now))
                         # This answer must be in JSON format
                         answer_json = True
@@ -478,7 +484,9 @@ class PaymentAction(View):
                                 # F.flush()
 
                         except PaymentError as e:
-                            # F.write("{} - NOTIFY Error - {}\n".format(now, e))
+                            # F.write(
+                            #   "{} - NOTIFY Error - {}\n".format(now, e)
+                            # )
                             # F.flush()
                             answer["error"] = "PS{:02d}".format(e.args[0])
                             if settings.DEBUG:
@@ -509,35 +517,45 @@ class PaymentAction(View):
                         # ERROR: Unknown action for yeepay (only allowed
                         # 'success', 'confirm' or 'cancel')
                         answer["error"] = "P005"
+                        logger.error(
+                            f"P005: Unknown action '{action}' for "
+                            f"PaymentRequest with locator '{locator}'.",
+                        )
 
                 # --- Unknown protocol ---
                 else:
                     answer["error"] = "P002"  # ERROR: Unknown protocol
+                    logger.error(
+                        f"P002: Unknown protocol '{pr.protocol}' for "
+                        f"PaymentRequest with locator '{locator}'.",
+                    )
 
             else:
                 # ERROR: PaymentRequest not found
                 answer["error"] = "P001"
+                logger.error(
+                    "P001: PaymentRequest with locator "
+                    f"'{locator}' not found.",
+                )
 
             # Return using JSON or normal redirect
             if answer_plain:
-
                 # Special case for those that need a forced plain text answer
                 return HttpResponse(answer_plain, content_type="text/plain")
 
             elif answer_json:
-
                 # This is the normal case, we return a JSON answer
                 return HttpResponse(
-                    json.dumps(answer), content_type="application/json"
+                    json.dumps(answer),
+                    content_type="application/json",
                 )
             else:
-
                 # This is the case when we return a redirect to the user
                 if pr.reverse == "autorender" or bool(
                     self.request.GET.get(
                         "autorender",
                         self.request.POST.get("autorender", False),
-                    )
+                    ),
                 ):
                     keys = ["action", "error", "locator"]
                     if settings.DEBUG:
@@ -549,11 +567,14 @@ class PaymentAction(View):
                         else:
                             newanswer[key] = "-"
                     return HttpResponseRedirect(
-                        reverse("CNDX_payments_confirmation", kwargs=newanswer)
+                        reverse(
+                            "CNDX_payments_confirmation",
+                            kwargs=newanswer,
+                        ),
                     )
                 else:
                     return HttpResponseRedirect(
-                        reverse(pr.reverse, kwargs=answer)
+                        reverse(pr.reverse, kwargs=answer),
                     )
 
 
@@ -562,7 +583,6 @@ class PaymentConfirmationAutorender(View):
 
     @method_decorator(login_required)
     def get(self, request, *args, **kwargs):
-
         # Get PaymentRequest if any
         locator = kwargs.get("locator", None)
         if locator:
@@ -608,7 +628,8 @@ class Verifysign(View):
 
         # print(request.GET['authtoken'])
         return HttpResponse(
-            json.dumps(answer), content_type="application/json"
+            json.dumps(answer),
+            content_type="application/json",
         )
         """
 

@@ -4,7 +4,6 @@ from django.db import migrations, models
 
 
 class Migration(migrations.Migration):
-
     dependencies = [
         ("codenerix_payments", "0015_alter_paymentrequest_order"),
     ]
@@ -13,13 +12,18 @@ class Migration(migrations.Migration):
         migrations.AlterField(
             model_name="paymentrequest",
             name="order_ref",
-            field=models.CharField(max_length=8, verbose_name="Order Reference"),
+            field=models.CharField(
+                max_length=8,
+                verbose_name="Order Reference",
+            ),
         ),
         migrations.AlterField(
             model_name="paymentrequest",
             name="reverse",
             field=models.CharField(
-                default="autorender", max_length=64, verbose_name="Reverse"
+                default="autorender",
+                max_length=64,
+                verbose_name="Reverse",
             ),
         ),
     ]

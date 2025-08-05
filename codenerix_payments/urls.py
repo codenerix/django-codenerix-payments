@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 #
 # django-codenerix-payments
 #
@@ -21,33 +20,29 @@
 from django.urls import re_path as url
 
 from codenerix_payments.views import (
-    PaymentRequestList,
-    PaymentRequestCreate,
-    PaymentRequestCreateModal,
-    PaymentRequestUpdate,
-    PaymentRequestUpdateModal,
-    PaymentRequestDelete,
-    PaymentConfirmationList,
-    PaymentAnswerList,
-    PaymentAction,
-    PaymentRequestDetail,
-    PaymentConfirmationDetail,
-    PaymentAnswerDetail,
-    PaymentPlatforms,
-    PaymentConfirmationAutorender,
-)
-
-from codenerix_payments.views import (
-    CurrencyList,
     CurrencyCreate,
     CurrencyCreateModal,
+    CurrencyDelete,
     CurrencyDetail,
+    CurrencyList,
     CurrencyUpdate,
     CurrencyUpdateModal,
-    CurrencyDelete,
+    PaymentAction,
+    PaymentAnswerDetail,
+    PaymentAnswerList,
+    PaymentConfirmationAutorender,
+    PaymentConfirmationDetail,
+    PaymentConfirmationList,
+    PaymentPlatforms,
+    PaymentRequestCreate,
+    PaymentRequestCreateModal,
+    PaymentRequestDelete,
+    PaymentRequestDetail,
+    PaymentRequestList,
+    PaymentRequestUpdate,
+    PaymentRequestUpdateModal,
+    Verifysign,
 )
-from codenerix_payments.views import Verifysign
-
 
 urlpatterns = [
     url(r"^verify_sign$", Verifysign.as_view(), name="verify_sign"),

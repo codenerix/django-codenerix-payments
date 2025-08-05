@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 #
 # django-codenerix-payments
 #
@@ -24,12 +23,12 @@ def url_path(url, action):
 
 
 def url_success(url):
-    return url_path(url, 'success')
+    return url_path(url, "success")
 
 
 def url_confirm(url):
-    return url_path(url, 'confirm')
+    return url_path(url, "confirm")
 
 
 def url_cancel(url):
-    return url_path(url, 'cancel')
+    return url_path(url, "cancel")

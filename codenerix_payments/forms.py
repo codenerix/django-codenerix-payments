@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 #
 # django-codenerix-payments
 #
@@ -18,16 +17,18 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from django.utils.translation import gettext as _
+from typing import List
 
 from codenerix.forms import GenModelForm
-from codenerix_payments.models import PaymentRequest, Currency
+from django.utils.translation import gettext as _
+
+from codenerix_payments.models import Currency, PaymentRequest  # type: ignore
 
 
 class CurrencyForm(GenModelForm):
     class Meta:
         model = Currency
-        exclude = []
+        exclude: List[str] = []
 
     def __groups__(self):
         g = [
@@ -38,7 +39,7 @@ class CurrencyForm(GenModelForm):
                 ["symbol", 6],
                 ["iso4217", 6],
                 ["price", 6],
-            )
+            ),
         ]
         return g
 
@@ -76,7 +77,7 @@ class PaymentRequestForm(GenModelForm):
                 ["reverse", 6],
                 ["order", 6],
                 ["notes", 6],
-            )
+            ),
         ]
         return g
 
@@ -110,6 +111,6 @@ class PaymentRequestUpdateForm(GenModelForm):
                 _("Details"),
                 12,
                 ["notes", 12],
-            )
+            ),
         ]
         return g

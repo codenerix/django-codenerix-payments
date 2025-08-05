@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 #
 # django-codenerix-payments
 #
@@ -19,7 +18,13 @@
 # limitations under the License.
 
 from django.contrib import admin
-from codenerix_payments.models import Currency, PaymentRequest, PaymentConfirmation, PaymentAnswer
+
+from codenerix_payments.models import (  # type: ignore
+    Currency,
+    PaymentAnswer,
+    PaymentConfirmation,
+    PaymentRequest,
+)
 
 admin.site.register(Currency)
 admin.site.register(PaymentRequest)
