@@ -6,6 +6,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [4.0.8] - 2025-08-06
+### Feature
+- Improved listing of PaymentRequest
+
 ## [4.0.7] - 2025-08-05
 ### Bugfix
 - Resolved an issue with Yeepay payment with the digital signature that prevented to sucessfully confirm the payment to the final user

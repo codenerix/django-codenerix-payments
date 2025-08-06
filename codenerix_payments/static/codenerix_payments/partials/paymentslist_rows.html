@@ -1,6 +1,7 @@
 <td align='center'>{{row.user|codenerix}}</td>
-<td align='center'><span codenerix-html-compile='row.is_paid|codenerix'></td>
-<td>{{row.locator|codenerix}}</td>
+<td align='center'><span codenerix-html-compile='row.is_paid|codenerix'></span></td>
+<td align='center' title="{{row.locator}}"><span codenerix-html-compile='row.locator|codenerix:"shorttext:5:page:2"'></span></td>
+<td align='center' title="{{row.feedback}}"><span codenerix-html-compile='row.feedback|codenerix:"bool"'></span></td>
 <td>{{row.order|codenerix}}</td>
 <td>{{row.order_ref|codenerix}}</td>
 <td>{{row.request_date|codenerix}}</td>

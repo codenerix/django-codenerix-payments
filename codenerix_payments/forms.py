@@ -60,7 +60,6 @@ class PaymentRequestForm(GenModelForm):
             "cancelled",
             "request",
             "answer",
-            "feedback",
         ]
         autofill = {
             "platform": ["select", 3, "CDNX_payments_platforms"],
@@ -77,6 +76,7 @@ class PaymentRequestForm(GenModelForm):
                 ["reverse", 6],
                 ["order", 6],
                 ["notes", 6],
+                ["feedback", 12],
             ),
         ]
         return g
