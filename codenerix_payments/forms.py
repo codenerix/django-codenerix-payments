@@ -88,10 +88,9 @@ class PaymentRequestUpdateForm(GenModelForm):
         exclude = [
             "user",
             "total",
-            "ref",
             "platform",
             "locator",
-            "order",
+            "ref" "order",
             "order_ref",
             "reverse",
             "currency",

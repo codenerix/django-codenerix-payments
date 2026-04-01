@@ -16,7 +16,6 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-
 # type: ignore
 
 import base64
@@ -31,9 +30,9 @@ import time
 import traceback
 from decimal import Decimal, InvalidOperation
 
-import paypalrestsdk  # type: ignore
+import paypalrestsdk  # pylint: disable=import-error
 import requests
-from codenerix.helpers import (  # type: ignore
+from codenerix.helpers import (
     CodenerixEncoder,
     JSONEncoder_newdefault,
     get_client_ip,
@@ -801,6 +800,12 @@ class PaymentRequest(CodenerixModel):
     )
     feedback = models.JSONField(_("Feedback"), blank=True, null=True)
 
+    def returned(self):
+        return self.paymentreturns.filter(
+            return_order_ref__isnull=False,
+            error=False,
+        ).exists()
+
     def __unicode__(self):
         return "PayReq({}):{}_{}:{}|{}:{}[{}]".format(
             self.pk,
@@ -819,24 +824,39 @@ class PaymentRequest(CodenerixModel):
         fields = []
         if info.request.user.is_superuser:
             fields.append(("user", _("User"), 100))
-        fields.append(("is_paid", _("Is paid?"), 100))
         fields.append(("locator", _("Locator"), 100))
         fields.append(("feedback", _("Feedback"), 100))
         fields.append(("order", _("Number"), 100))
-        fields.append(("order_ref", _("Reference"), 100))
+        fields.append(("order_ref", None))
         fields.append(("request_date", _("Request"), 100))
         fields.append(("answer_date", _("Answer"), 100))
         fields.append(("platform", _("Platform"), 100))
         fields.append(("protocol", _("Protocol"), 100))
         fields.append(("total", _("Total"), 100))
         fields.append(("currency", _("Currency"), 100))
-        fields.append(("cancelled", _("Cancelled"), 100))
+        fields.append(("is_paid", None))
+        fields.append(("cancelled", None, 100))
+        fields.append(("returned", None, 100))
         fields.append(("error", _("Error"), 100))
         fields.append(("notes", _("Notes"), 100))
         fields.append(("ip", _("IP"), 100))
+        fields.append(("return_msg", None))
         if getattr(settings, "CDNX_PAYMENTS_REQUEST_PAY", False):
             fields.append(("get_approval_list", _("Paid"), 100))
         return fields
+
+    def return_msg(self):
+        return _(
+            "Return payment "
+            "%(order)s (%(order_ref)s) "
+            "for %(total)s %(currency)s?"
+            % {
+                "order": self.order,
+                "order_ref": self.order_ref,
+                "total": self.total,
+                "currency": self.currency,
+            },
+        )
 
     def __searchF__(self, info):  # noqa: N802
         def currencies():
@@ -860,6 +880,8 @@ class PaymentRequest(CodenerixModel):
                 )
             elif kindfilter == "C":
                 return Q(cancelled=True)
+            elif kindfilter == "R":
+                return Q(paymentreturns__error=False)
             else:
                 logger.error(
                     f"PR: Unknown kindpaidfilter '{kindfilter}' for "
@@ -900,7 +922,12 @@ class PaymentRequest(CodenerixModel):
             tf["get_approval_list"] = (
                 _("Approval"),
                 kindpaidfilter,
-                [("Y", _("Yes")), ("N", _("No")), ("C", _("Cancelled"))],
+                [
+                    ("Y", _("Yes")),
+                    ("N", _("No")),
+                    ("C", _("Cancelled")),
+                    ("R", _("Returned")),
+                ],
             )
         return tf
 
@@ -3030,6 +3057,331 @@ class PaymentAnswer(CodenerixModel):
         return answer
 
 
+class PaymentReturn(CodenerixModel):
+    """
+    Store payment returns
+    """
+
+    payment = models.ForeignKey(
+        PaymentRequest,
+        blank=False,
+        null=False,
+        related_name="paymentreturns",
+        on_delete=models.CASCADE,
+    )
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        blank=True,
+        null=True,
+    )
+    return_order = models.PositiveIntegerField(
+        _("Return Order Number"),
+        blank=False,
+        null=False,
+        validators=[MaxValueValidator(78364164096)],
+    )
+    # 78364164096 => codenerix::hex36 = 7 char
+    # validators=[MaxValueValidator(2821109907455)],
+    return_order_ref = models.CharField(
+        _("Return Order Reference"),
+        max_length=8,
+        blank=False,
+        null=False,
+    )
+    error = models.BooleanField(
+        _("Error"),
+        blank=False,
+        null=False,
+        default=False,
+    )
+    error_txt = models.TextField(_("Error Text"), blank=True, null=True)
+
+    request = models.TextField(_("Request"), blank=True, null=True)
+    answer = models.TextField(_("Answer"), blank=True, null=True)
+    request_date = models.DateTimeField(
+        _("Request date"),
+        editable=False,
+        blank=True,
+        null=True,
+    )
+    answer_date = models.DateTimeField(
+        _("Answer date"),
+        editable=False,
+        blank=True,
+        null=True,
+    )
+    ip = models.GenericIPAddressField(
+        _("IP"),
+        blank=False,
+        null=False,
+        editable=False,
+    )
+
+    def __unicode__(self):
+        if self.error:
+            error = "KO"
+        else:
+            error = "OK"
+        return "PayRet:{}-{}::{}".format(
+            self.payment,
+            self.return_order,
+            error,
+        )
+
+    def __str__(self):
+        return self.__unicode__()
+
+    def __fields__(self, info):
+        fields = []
+        fields.append(("user", _("User"), 100))
+        fields.append(("payment__locator", _("Locator"), 100))
+        fields.append(("payment__ref", _("Payment Ref"), 100))
+        fields.append(("payment__order", _("Order"), 100))
+        fields.append(("payment__order_ref", None))
+        fields.append(("return_order", _("Refund"), 100))
+        fields.append(("return_order_ref", None))
+        fields.append(("request_date", _("Request Date"), 100))
+        fields.append(("answer_date", _("Answer Date"), 100))
+        fields.append(("payment__total", _("Total"), 100))
+        fields.append(("payment__currency", _("Currency"), 100))
+        fields.append(("error", _("Error"), 100))
+        fields.append(("ip", _("IP"), 100))
+        return fields
+
+    def __limitQ__(self, info):  # noqa: N802
+        limit = {}
+        # If user is not a superuser, the shown records depends on the profile
+        if not info.request.user.is_superuser:
+            limit["user"] = Q(payment__user=info.request.user)
+
+        return limit
+
+    def save(self, *args, **kwargs):
+
+        # Check if we are a new object
+        if not self.pk:
+
+            # Autoset user
+            self.user = get_current_user()
+
+        # Prepare CodenerixEncoder
+        ce = CodenerixEncoder()
+
+        # If no orther specified
+        auto_set_order = not self.return_order
+        if auto_set_order:
+            # No order number yet
+            self.return_order = 0
+        else:
+            # Encode order reference
+            self.return_order_ref = ce.numeric_encode(
+                self.return_order,
+                dic="hex36",
+                length=7,
+                cfill="A",
+            )
+
+        # Save the model like always
+        m = super().save(*args, **kwargs)
+
+        # Autoset order
+        if auto_set_order:
+            # Set order number
+            self.return_order = self.pk
+
+            # Encode order reference
+            self.return_order_ref = ce.numeric_encode(
+                self.pk,
+                dic="hex36",
+                length=7,
+                cfill="A",
+            )
+
+        # Save the model like always
+        return m
+
+    def do_return(self, pr, data, request):
+
+        # Autofill class
+        self.ip = get_client_ip(request)
+        self.payment = pr
+
+        # Check payment status
+        error = None
+        if pr.is_paid:
+
+            # Check if the payment has been returned already
+            pret = pr.paymentreturns.filter(
+                return_order_ref__isnull=False,
+                error=False,
+            )
+            if pret.count():
+                error = (12, _("Payment already returned"))
+                self.error = True
+                self.error_txt = json.dumps(
+                    {"error": error[0], "errortxt": str(error[1])},
+                )
+                self.save()
+                logger.error(
+                    f"PT12: Payment {pr.locator} already returned, "
+                    "action not allowed",
+                )
+                raise PaymentError(*error)
+
+            # Get config
+            meta = settings.PAYMENTS.get("meta", {})
+            config = settings.PAYMENTS.get(pr.platform, {})
+
+            # Check that PaymentRequest and our actual enviroment is the same
+            if pr.real == meta.get("real", False):
+
+                # Check protocol
+                if pr.protocol in ["paypal", "redsys", "redsysxml"]:
+                    error = (
+                        8,
+                        _("Return payment not supported for this protocol"),
+                    )
+                    logger.error(
+                        f"PT08: Return payment not supported for protocol "
+                        f"{pr.protocol} and payment {pr.locator}",
+                    )
+                elif pr.protocol == "yeepay":
+                    # Pre-save
+                    self.save()
+                    # Do return
+                    error = self.__return_yeepay(
+                        config,
+                        pr,
+                        error,
+                        request,
+                    )
+                else:
+                    error = (
+                        1,
+                        _("Unknown protocol '{protocol}'").format(
+                            protocol=pr.protocol,
+                        ),
+                    )
+                    logger.error(
+                        f"PT01: Unknown protocol '{pr.protocol}' "
+                        f"for payment {pr.locator}",
+                    )
+            else:
+                if meta.get("real", False):
+                    envsys = "REAL"
+                else:
+                    envsys = "TEST"
+                if pr.real:
+                    envself = "REAL"
+                else:
+                    envself = "TEST"
+                error = (
+                    2,
+                    _(
+                        "Wrong environment: this transaction is "
+                        "for '{selfenviron}' environment and system is "
+                        "set to '{sysenviron}'",
+                    ).format(selfenviron=envself, sysenviron=envsys),
+                )
+                logger.error(
+                    f"PT02: Wrong environment for payment {pr.locator}: "
+                    f"self={envself} - system={envsys}",
+                )
+        else:
+            error = (
+                4,
+                _("Payment is not paid, access denied!"),
+            )
+            logger.error(
+                f"PT04: Payment {pr.locator} is not paid, "
+                "action not allowed",
+            )
+
+        # If there was some error, save and launch it!
+        if error:
+            self.error = True
+            self.error_txt = json.dumps(
+                {"error": error[0], "errortxt": str(error[1])},
+            )
+            self.save()
+            raise PaymentError(*error)
+
+    def __return_yeepay(self, config, pr, error, request):
+
+        # Find unique order number
+        try:
+            answer = json.loads(self.payment.answer)
+        except Exception:
+            answer = None
+        if answer:
+            unique_order_no = answer.get("result", {}).get(
+                "uniqueOrderNo",
+                None,
+            )
+        else:
+            unique_order_no = None
+
+        # Check if we have a unique order number
+        if unique_order_no:
+            # Notify Yeepay
+            merchant_number = config.get("merchant_number", None)
+            request = {
+                "merchantNo": merchant_number,
+                "refundRequestId": self.return_order_ref,
+                "refundAmount": round(float(self.payment.total), 2),
+                "parentMerchantNo": merchant_number,
+                "orderId": self.payment.order_ref,
+                "uniqueOrderNo": unique_order_no,
+            }
+
+            # Register request
+            self.request = json.dumps(request)
+            self.request_date = timezone.now()
+
+            # Do request
+            client = yeepay_client(config)
+            try:
+                answer = client.post(
+                    api="/rest/v1.0/trade/refund",
+                    post_params=request,
+                )
+            except Exception as e:
+                answer = None
+                error = str(e)
+                logger.error(
+                    f"PT01: Yeepay return payment error for payment "
+                    f"{pr.locator}: {error}",
+                )
+
+            # Register answer
+            self.answer = json.dumps(answer)
+            self.answer_date = timezone.now()
+
+            # Analize answer
+            if answer:
+                print(answer)
+                code = answer.get("result", {}).get("code", None)
+                message = answer.get("result", {}).get("message", None)
+                if code != "OPR00000" or message != "成功":
+                    error = (
+                        1,
+                        _(
+                            f"Yeepay cancel error: code={code} "
+                            f"message={message}",
+                        ),
+                    )
+                    logger.error(
+                        f"PT01: Yeepay return payment error for payment "
+                        f"{pr.locator}: code={code} message={message}",
+                    )
+
+        # Remember payment confirmation for future reference
+        self.save()
+
+        return error
+
+
 class PaymentError(Exception):
     """
     ERROR CODES
@@ -3044,6 +3396,7 @@ class PaymentError(Exception):
     9:  Information in the transaction is not authorized (signature not valid)
     10: Payment already confirmed
     11: Wrong information on the request
+    12: Payment already returned
     """  # noqa: E501
 
     pass

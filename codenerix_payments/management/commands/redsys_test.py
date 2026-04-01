@@ -186,7 +186,7 @@ class Command(BaseCommand, Debugger):
                     info = pr.get_approval()
 
                     # Create a temporal filename
-                    (fd, filename) = tempfile.mkstemp(
+                    fd, filename = tempfile.mkstemp(
                         suffix=".html",
                         prefix="pay_",
                         text=True,

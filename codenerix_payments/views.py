@@ -53,6 +53,7 @@ from codenerix_payments.models import (  # type: ignore
     PaymentConfirmation,
     PaymentError,
     PaymentRequest,
+    PaymentReturn,
 )
 
 logger = logging.getLogger(__name__)
@@ -101,11 +102,21 @@ class PaymentRequestList(GenList):
         "no": __("No"),
         "cancel": __("Cancel"),
         "cancelled": __("Cancelled"),
+        "return": __("Refund"),
+        "returned": __("Refunded"),
         "error": __("Error"),
+    }
+    extra_context = {
+        "menu": ["payments", "paymentrequest"],
+        "bread": [_("Payments"), _("Payment Request")],
     }
 
     def dispatch(self, *args, **kwargs):
         self.client_context = {
+            "returnurl": reverse(
+                "payment_url",
+                kwargs={"action": "return", "locator": "LOCATOR"},
+            ),
             "cancelurl": reverse(
                 "payment_url",
                 kwargs={"action": "cancel", "locator": "LOCATOR"},
@@ -189,6 +200,7 @@ class PaymentRequestDetail(GenDetail):
             ["order_ref", 6],
             ["real", 6],
             ["cancelled", 6],
+            ["returned", 6],
             ["total", 6],
             ["currency", 6],
             ["error", 6],
@@ -264,6 +276,10 @@ class PaymentConfirmationList(GenList):
         "codenerix_payments/partials/paymentsconfirmlist_rows.html"
     )
     gentranslate = {"yes": __("Yes"), "no": __("No")}
+    extra_context = {
+        "menu": ["payments", "paymentconfirmation"],
+        "bread": [_("Payments"), _("Payment Confirmation")],
+    }
 
 
 class PaymentConfirmationDetail(GenDetail):
@@ -286,6 +302,10 @@ class PaymentAnswerList(GenList):
         "codenerix_payments/partials/paymentsanswerlist_rows.html"
     )
     gentranslate = {"yes": __("Yes"), "no": __("No")}
+    extra_context = {
+        "menu": ["payments", "paymentanswer"],
+        "bread": [_("Payments"), _("Payment Answers")],
+    }
 
 
 class PaymentAnswerDetail(GenDetail):
@@ -305,6 +325,46 @@ class PaymentAnswerDetail(GenDetail):
         ),
         (_("Request"), 6, ["request_date", 12], ["request", 12]),
         (_("Answer"), 6, ["answer", 12], ["answer_date", 12]),
+    ]
+    linkedit = False
+    linkdelete = False
+
+
+class PaymentReturnList(GenList):
+    model = PaymentReturn
+    linkadd = False
+    show_details = True
+    default_ordering = ["-created"]
+    static_partial_row = (
+        "codenerix_payments/partials/paymentsreturnlist_rows.html"
+    )
+    gentranslate = {"yes": __("Yes"), "no": __("No")}
+    extra_context = {
+        "menu": ["payments", "paymentreturn"],
+        "bread": [_("Payments"), _("Payment Return")],
+    }
+
+
+class PaymentReturnDetail(GenDetail):
+    model = PaymentReturn
+    groups = [
+        (
+            _("Information"),
+            6,
+            ["payment", 6],
+            ["user", 6],
+            ["request_date", 6],
+            ["answer_date", 6],
+        ),
+        (
+            _("Process"),
+            6,
+            ["error", 6],
+            ["error_txt", 6],
+            ["return_order", 6],
+            ["return_order_ref", 6],
+        ),
+        (_("Result"), 12, ["request", 12], ["answer", 12]),
     ]
     linkedit = False
     linkdelete = False
@@ -331,6 +391,7 @@ class PaymentAction(View):
 
     @method_decorator(csrf_exempt)
     def dispatch(self, request, *args, **kwargs):
+        reverse_target = "CNDX_payments_confirmation"
         # import datetime
         # with open("/tmp/codenerix_info.txt", "a") as F:
         if True:
@@ -503,6 +564,15 @@ class PaymentAction(View):
                             if settings.DEBUG:
                                 answer["errortxt"] = str(e.args[1])
 
+                    elif action == "return":
+                        pret = PaymentReturn()
+                        try:
+                            pret.do_return(pr, request.GET, request)
+                        except PaymentError as e:
+                            answer["error"] = "PT{:02d}".format(e.args[0])
+                            if settings.DEBUG:
+                                answer["errortxt"] = str(e.args[1])
+                        reverse_target = "CNDX_payments_return"
                     elif action == "cancel":
                         pc = PaymentConfirmation()
                         # pc.ip = get_client_ip(self.request)
@@ -568,7 +638,7 @@ class PaymentAction(View):
                             newanswer[key] = "-"
                     return HttpResponseRedirect(
                         reverse(
-                            "CNDX_payments_confirmation",
+                            reverse_target,
                             kwargs=newanswer,
                         ),
                     )
@@ -597,6 +667,38 @@ class PaymentConfirmationAutorender(View):
         context = {}
         context["request"] = pr
         context["confirmation"] = paid
+        context["error"] = kwargs.get("error", None)
+        context["errortxt"] = kwargs.get("errortxt", None)
+        context["action"] = kwargs.get("action", None)
+
+        # Render
+        return render(request, self.template_name, context)
+
+
+class PaymentReturnAutorender(View):
+    template_name = "codenerix_payments/payreturn.html"
+
+    @method_decorator(login_required)
+    def get(self, request, *args, **kwargs):
+        # Get PaymentRequest if any
+        locator = kwargs.get("locator", None)
+        if locator:
+            pr = PaymentRequest.objects.filter(locator=locator).first()
+        else:
+            pr = None
+
+        # Check if it is already paid
+        if pr:
+            refunded = pr.paymentreturns.filter(
+                return_order__isnull=False,
+            ).first()
+        else:
+            refunded = None
+
+        # Build context
+        context = {}
+        context["request"] = pr
+        context["refunded"] = refunded
         context["error"] = kwargs.get("error", None)
         context["errortxt"] = kwargs.get("errortxt", None)
         context["action"] = kwargs.get("action", None)

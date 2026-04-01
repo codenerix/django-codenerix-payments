@@ -41,6 +41,9 @@ from codenerix_payments.views import (
     PaymentRequestList,
     PaymentRequestUpdate,
     PaymentRequestUpdateModal,
+    PaymentReturnAutorender,
+    PaymentReturnDetail,
+    PaymentReturnList,
     Verifysign,
 )
 
@@ -140,6 +143,16 @@ urlpatterns = [
         name="paymentanswer_detail",
     ),
     url(
+        r"^paymentreturns$",
+        PaymentReturnList.as_view(),
+        name="paymentreturn_list",
+    ),
+    url(
+        r"^paymentreturns/(?P<pk>\w+)$",
+        PaymentReturnDetail.as_view(),
+        name="paymentreturn_detail",
+    ),
+    url(
         r"^action/(?P<locator>[a-zA-Z0-9+/]+)/(?P<action>\w+)/$",
         PaymentAction.as_view(),
         name="payment_url",
@@ -158,5 +171,15 @@ urlpatterns = [
         r"^confirmation/(?P<locator>[a-zA-Z0-9+/]+)/(?P<action>\w+)/(?P<error>\w+)/(?P<errortxt>.+)$",  # noqa: E501
         PaymentConfirmationAutorender.as_view(),
         name="CNDX_payments_confirmation",
+    ),
+    url(
+        r"^payreturn/(?P<locator>[a-zA-Z0-9+/]+)/(?P<action>\w+)/(?P<error>\w+)$",  # noqa: E501
+        PaymentReturnAutorender.as_view(),
+        name="CNDX_payments_return",
+    ),
+    url(
+        r"^payreturn/(?P<locator>[a-zA-Z0-9+/]+)/(?P<action>\w+)/(?P<error>\w+)/(?P<errortxt>.+)$",  # noqa: E501
+        PaymentReturnAutorender.as_view(),
+        name="CNDX_payments_return",
     ),
 ]

@@ -1,9 +1,7 @@
 <td align='center'>{{row.user|codenerix}}</td>
-<td align='center'><span codenerix-html-compile='row.is_paid|codenerix'></span></td>
 <td align='center' title="{{row.locator}}"><span codenerix-html-compile='row.locator|codenerix:"shorttext:5:page:2"'></span></td>
 <td align='center' title="{{row.feedback}}"><span codenerix-html-compile='row.feedback|codenerix:"bool"'></span></td>
-<td>{{row.order|codenerix}}</td>
-<td>{{row.order_ref|codenerix}}</td>
+<td>{{row.order|codenerix}} : {{row.order_ref|codenerix}}</td>
 <td>{{row.request_date|codenerix}}</td>
 <td>{{row.answer_date|codenerix}}</td>
 <td>{{row.platform|codenerix}}</td>
@@ -12,14 +10,8 @@
 <td>{{row.currency|codenerix}}</td>
 <td>
     <b>
-        <span ng-if='row.cancelled' class='text-danger'>{{data.meta.gentranslate.yes}}</span>
-        <span ng-if='!row.cancelled' class='text-success'>{{data.meta.gentranslate.no}}</span>
-    </b>
-</td>
-<td>
-    <b>
-        <span ng-if='row.error' class='text-danger'>{{data.meta.gentranslate.yes}}</span>
-        <span ng-if='!row.error' class='text-success'>{{data.meta.gentranslate.no}}</span>
+        <span ng-show='row.error' class='text-danger'>{{data.meta.gentranslate.yes}}</span>
+        <span ng-hide='row.error' class='text-success'>-</span>
     </b>
 </td>
 <td>{{row.notes|codenerix}}</td>
@@ -27,8 +19,21 @@
 <td ng-click="$event.stopPropagation();" ng-controller="codenerixPaymentRequestCtrl">
 
     <span ng-if='row.is_paid || row.cancelled'>
-        <span ng-if='row.is_paid && (!row.cancelled)'>
-            <button class='btn btn-success btn-xs'>{{data.meta.gentranslate.paid}}</button>
+        <span ng-if='row.is_paid && (!row.cancelled) && (row.returned)'>
+            <button class='btn btn-warning btn-xs'>{{data.meta.gentranslate.returned}}</button>
+        </span>
+        <span
+            ng-init="showRefundButton=false"
+            ng-mouseenter="showRefundButton=true"
+            ng-mouseleave="showRefundButton=false"
+            ng-if='row.is_paid && (!row.cancelled) && (!row.returned)'>
+            <button
+                ng-hide="showRefundButton"
+                class='btn btn-success btn-xs'>{{data.meta.gentranslate.paid}}</button>
+            <button
+                ng-click="submit_return(row.locator, row.return_msg, data.meta.context.returnurl)"
+                ng-show="showRefundButton"
+                class='btn btn-info btn-xs'>{{data.meta.gentranslate.return}}</button>
         </span>
         <span ng-if='!row.is_paid && row.cancelled'>
             <button class='btn btn-secondary btn-xs'>{{data.meta.gentranslate.cancelled}}</button>

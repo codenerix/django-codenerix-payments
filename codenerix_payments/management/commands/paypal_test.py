@@ -23,7 +23,7 @@ import time
 from codenerix_lib.debugger import Debugger
 from django.core.management.base import BaseCommand, CommandError
 
-from codenerix_payments.models import (  # type:ignore
+from codenerix_payments.models import (  # type: ignore
     Currency,
     PaymentConfirmation,
     PaymentError,
@@ -187,7 +187,7 @@ class Command(BaseCommand, Debugger):
                     # Process the confirmation URL
                     data = {}
                     for arg in confirmation.split("?")[1].split("&"):
-                        (key, value) = arg.split("=")
+                        key, value = arg.split("=")
                         data[key] = value
 
                     # Get action
