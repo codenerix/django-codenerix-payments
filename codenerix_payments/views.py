@@ -691,6 +691,7 @@ class PaymentReturnAutorender(View):
         if pr:
             refunded = pr.paymentreturns.filter(
                 return_order__isnull=False,
+                error=False,
             ).first()
         else:
             refunded = None
