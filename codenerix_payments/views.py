@@ -584,9 +584,13 @@ class PaymentAction(View):
                             )
                             # We will return a JSON answer with the error, but
                             # we will not process the return
-                            answer_json = True
-                            answer_plain = None
                             reverse_target = None
+
+                        # Check if the user expected a JSON answer
+                        answer_json = (
+                            request.GET.get("json", request.POST("json", None))
+                            is not None
+                        )
 
                     elif action == "cancel":
                         pc = PaymentConfirmation()
@@ -628,39 +632,40 @@ class PaymentAction(View):
                 # Special case for those that need a forced plain text answer
                 return HttpResponse(answer_plain, content_type="text/plain")
 
-            elif answer_json:
+            # JSON Answer
+            if answer_json:
                 # This is the normal case, we return a JSON answer
                 return HttpResponse(
                     json.dumps(answer),
                     content_type="application/json",
                 )
-            else:
-                # This is the case when we return a redirect to the user
-                if pr.reverse == "autorender" or bool(
-                    self.request.GET.get(
-                        "autorender",
-                        self.request.POST.get("autorender", False),
+
+            # This is the case when we return a redirect to the user
+            if pr.reverse == "autorender" or bool(
+                self.request.GET.get(
+                    "autorender",
+                    self.request.POST.get("autorender", False),
+                ),
+            ):
+                keys = ["action", "error", "locator"]
+                if settings.DEBUG:
+                    keys.append("errortxt")
+                newanswer = {}
+                for key in keys:
+                    if key in answer:
+                        newanswer[key] = answer[key]
+                    else:
+                        newanswer[key] = "-"
+                return HttpResponseRedirect(
+                    reverse(
+                        reverse_target,
+                        kwargs=newanswer,
                     ),
-                ):
-                    keys = ["action", "error", "locator"]
-                    if settings.DEBUG:
-                        keys.append("errortxt")
-                    newanswer = {}
-                    for key in keys:
-                        if key in answer:
-                            newanswer[key] = answer[key]
-                        else:
-                            newanswer[key] = "-"
-                    return HttpResponseRedirect(
-                        reverse(
-                            reverse_target,
-                            kwargs=newanswer,
-                        ),
-                    )
-                else:
-                    return HttpResponseRedirect(
-                        reverse(pr.reverse, kwargs=answer),
-                    )
+                )
+            else:
+                return HttpResponseRedirect(
+                    reverse(pr.reverse, kwargs=answer),
+                )
 
 
 class PaymentConfirmationAutorender(View):
