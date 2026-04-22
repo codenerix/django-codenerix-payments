@@ -6,6 +6,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [4.0.11] - 2026-04-22
+### Bugfix
+- Payment Return requests must check the user is authenticated
+
 ## [4.0.10] - 2026-01-06
 ### Bugfix
 - Refunded state after operation was showing the wrong message to the user

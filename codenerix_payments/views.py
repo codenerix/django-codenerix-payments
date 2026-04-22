@@ -565,14 +565,29 @@ class PaymentAction(View):
                                 answer["errortxt"] = str(e.args[1])
 
                     elif action == "return":
-                        pret = PaymentReturn()
-                        try:
-                            pret.do_return(pr, request.GET, request)
-                        except PaymentError as e:
-                            answer["error"] = "PT{:02d}".format(e.args[0])
-                            if settings.DEBUG:
-                                answer["errortxt"] = str(e.args[1])
-                        reverse_target = "CNDX_payments_return"
+                        # Check the user is authenticated, if not we will not
+                        # process the return
+                        if request.user.is_authenticated:
+                            pret = PaymentReturn()
+                            try:
+                                pret.do_return(pr, request.GET, request)
+                            except PaymentError as e:
+                                answer["error"] = "PT{:02d}".format(e.args[0])
+                                if settings.DEBUG:
+                                    answer["errortxt"] = str(e.args[1])
+                            reverse_target = "CNDX_payments_return"
+                        else:
+                            answer["error"] = "P006"
+                            logger.error(
+                                f"P006: User not authenticated"
+                                f"PaymentRequest with locator '{locator}'.",
+                            )
+                            # We will return a JSON answer with the error, but
+                            # we will not process the return
+                            answer_json = True
+                            answer_plain = None
+                            reverse_target = None
+
                     elif action == "cancel":
                         pc = PaymentConfirmation()
                         # pc.ip = get_client_ip(self.request)
