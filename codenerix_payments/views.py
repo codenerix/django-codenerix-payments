@@ -588,7 +588,10 @@ class PaymentAction(View):
 
                         # Check if the user expected a JSON answer
                         answer_json = (
-                            request.GET.get("json", request.POST("json", None))
+                            request.GET.get(
+                                "json",
+                                request.POST.get("json", None),
+                            )
                             is not None
                         )
 

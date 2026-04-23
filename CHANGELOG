@@ -6,6 +6,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [4.0.13] - 2026-04-23
+### Bugfix
+- Payment Return answer typo repaired
+
 ## [4.0.12] - 2026-04-22
 ### Feature
 - Payment Return supports answering with JSON if the user requests it
