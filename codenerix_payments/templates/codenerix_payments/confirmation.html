@@ -1,5 +1,9 @@
 {% load i18n %}
-<h1>{% trans "PAYMENT CONFIRMATION" %}</h1>
+{% if action == "return" %}
+    <h1>{% trans "PAYMENT REFUND" %}</h1>
+{% else %}
+    <h1>{% trans "PAYMENT CONFIRMATION" %}</h1>
+{% endif %}
 <table>
     <tr><td><u>{% trans "Action" %}:</u></td><td>{{action}}</td></tr>
     <tr><td><u>{% trans "Error" %}:</u></td><td>{{error}}</td></tr>
@@ -7,21 +11,43 @@
         <tr><td><u>{% trans "Error explained" %}:</u></td><td>{{errortxt}}</td></tr>
     {% endif %}
     <tr><td><u>{% trans "Requested" %}:</u></td><td>{{request.request_date}}</td></tr>
-    {% if confirmation %}
-        <tr><td><u>{% trans "Answered" %}:</u></td><td>{{confirmation.answer_date}}</td></tr>
+    {% if action == "return" %}
+        <tr>
+            <td>
+                <u>{% trans "Status" %}:</u>
+            </td>
+            <td>
+                <b>
+                    {% if request.refund == "A" %}{% trans "All" %}
+                        <font color="green">{% trans "All" %}</font>
+                    {% elif request.refund == "P" %}
+                        <font color="orange">{% trans "Partial" %}</font>
+                    {% elif request.refund == "N" %}
+                        <font color="blue">{% trans "None" %}</font>
+                    {% else %}
+                        <font color="red">{% trans "ERROR" %}</font>
+                    {% endif %}
+                </b>
+                ( {{request.total_returned}} {% trans "refunded" %}/ {{request.total}} {% trans "total" %} )
+            </td>
+        </tr>
+    {% else %}
+        {% if paid %}
+            <tr><td><u>{% trans "Answered" %}:</u></td><td>{{paid.answer_date}}</td></tr>
+        {% endif %}
+        <tr>
+            <td>
+                <u>{% trans "Status" %}:</u>
+            </td>
+            <td>
+                <b>
+                {% if paid %}
+                    <font color='green'>{% trans "PAID" %}</font>
+                {% else %}
+                    <font color='red'>{% trans "NOT PAID" %}</font>
+                {% endif %}
+                </b>
+            </td>
+        </tr>
     {% endif %}
-    <tr>
-        <td>
-            <u>{% trans "Status" %}:</u>
-        </td>
-        <td>
-            <b>
-            {% if confirmation %}
-                <font color='green'>{% trans "CONFIRMED" %}</font>
-            {% else %}
-                <font color='red'>{% trans "NOT CONFIRMED" %}</font>
-            {% endif %}
-            </b>
-        </td>
-    </tr>
 </table>

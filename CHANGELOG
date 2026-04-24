@@ -6,6 +6,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [4.0.14] - 2026-04-24
+### Feature
+- Payment now support partial refunds, allowing users to refund only a portion of the total payment amount.
+- Several payment refunds can be made for the same payment, as long as the total refunded amount does not exceed the original payment amount.
+
 ## [4.0.13] - 2026-04-23
 ### Bugfix
 - Payment Return answer typo repaired

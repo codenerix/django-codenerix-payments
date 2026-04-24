@@ -43,6 +43,7 @@ from Crypto.PublicKey import RSA  # nosec B413
 from cryptography.hazmat.primitives import hashes, hmac
 from cryptography.hazmat.primitives.ciphers import Cipher, algorithms, modes
 from django.conf import settings
+from django.core.exceptions import ValidationError
 from django.core.validators import MaxValueValidator
 from django.db import models
 from django.db.models import Q
@@ -800,11 +801,33 @@ class PaymentRequest(CodenerixModel):
     )
     feedback = models.JSONField(_("Feedback"), blank=True, null=True)
 
-    def returned(self):
-        return self.paymentreturns.filter(
+    @property
+    def total_returned(self):
+        # If the sum of all the returns are equal to the total
+        total_returned = 0
+        returned = self.paymentreturns.filter(
             return_order_ref__isnull=False,
             error=False,
-        ).exists()
+        )
+        for pret in returned:
+            if pret.amount is None:
+                total_returned += self.total
+            else:
+                total_returned += pret.amount
+        return total_returned
+
+    def returned(self):
+        # Get the total returned
+        total_returned = self.total_returned
+        # Decide the partial result
+        if total_returned == self.total:
+            return "A"
+        elif total_returned > self.total:
+            return "E"
+        elif total_returned > 0:
+            return "P"
+        else:
+            return "N"
 
     def __unicode__(self):
         return "PayReq({}):{}_{}:{}|{}:{}[{}]".format(
@@ -833,6 +856,7 @@ class PaymentRequest(CodenerixModel):
         fields.append(("platform", _("Platform"), 100))
         fields.append(("protocol", _("Protocol"), 100))
         fields.append(("total", _("Total"), 100))
+        fields.append(("total_returned", None))
         fields.append(("currency", _("Currency"), 100))
         fields.append(("is_paid", None))
         fields.append(("cancelled", None, 100))
@@ -840,23 +864,9 @@ class PaymentRequest(CodenerixModel):
         fields.append(("error", _("Error"), 100))
         fields.append(("notes", _("Notes"), 100))
         fields.append(("ip", _("IP"), 100))
-        fields.append(("return_msg", None))
         if getattr(settings, "CDNX_PAYMENTS_REQUEST_PAY", False):
             fields.append(("get_approval_list", _("Paid"), 100))
         return fields
-
-    def return_msg(self):
-        return _(
-            "Return payment "
-            "%(order)s (%(order_ref)s) "
-            "for %(total)s %(currency)s?"
-            % {
-                "order": self.order,
-                "order_ref": self.order_ref,
-                "total": self.total,
-                "currency": self.currency,
-            },
-        )
 
     def __searchF__(self, info):  # noqa: N802
         def currencies():
@@ -3075,6 +3085,13 @@ class PaymentReturn(CodenerixModel):
         blank=True,
         null=True,
     )
+    amount = models.DecimalField(
+        _("Amount"),
+        blank=False,
+        null=True,
+        max_digits=18,
+        decimal_places=2,
+    )
     return_order = models.PositiveIntegerField(
         _("Return Order Number"),
         blank=False,
@@ -3143,6 +3160,7 @@ class PaymentReturn(CodenerixModel):
         fields.append(("return_order_ref", None))
         fields.append(("request_date", _("Request Date"), 100))
         fields.append(("answer_date", _("Answer Date"), 100))
+        fields.append(("amount", _("Amount"), 100))
         fields.append(("payment__total", _("Total"), 100))
         fields.append(("payment__currency", _("Currency"), 100))
         fields.append(("error", _("Error"), 100))
@@ -3156,6 +3174,24 @@ class PaymentReturn(CodenerixModel):
             limit["user"] = Q(payment__user=info.request.user)
 
         return limit
+
+    def clean(self):
+        # Check if the total Return amounts already accepted
+        # together with this one do not exceed the total amount of the payment
+        total_returned = (
+            self.payment.paymentreturns.filter(
+                return_order_ref__isnull=False,
+                error=False,
+            ).aggregate(total=models.Sum("amount"))["total"]
+            or 0
+        )
+        if self.amount + total_returned > self.payment.total:
+            raise ValidationError(
+                _(
+                    f"Total amount of returns ({self.amount + total_returned})"
+                    " exceeds the payment total ({self.payment_total})",
+                ),
+            )
 
     def save(self, *args, **kwargs):
 
@@ -3211,21 +3247,52 @@ class PaymentReturn(CodenerixModel):
         error = None
         if pr.is_paid:
 
-            # Check if the payment has been returned already
-            pret = pr.paymentreturns.filter(
-                return_order_ref__isnull=False,
-                error=False,
+            # Get amount to return from GET json param
+            try:
+                self.amount = Decimal(data.get("amount", None))
+            except (InvalidOperation, TypeError):
+                self.amount = None
+
+            # Calculate total to return now
+            if self.amount is None:
+                total_this_return = pr.total
+            else:
+                total_this_return = self.amount
+
+            # Check if all the amount of the payment has been returned already
+            total_returned = (
+                pr.paymentreturns.filter(
+                    return_order_ref__isnull=False,
+                    error=False,
+                ).aggregate(total=models.Sum("amount"))["total"]
+                or 0
             )
-            if pret.count():
-                error = (12, _("Payment already returned"))
+
+            # Calculate total that would be returned with this return
+            if (total_returned + total_this_return) > pr.total:
+                error = (
+                    12,
+                    _(
+                        "Total amount of returns "
+                        f"({total_returned + total_this_return}) "
+                        "would exceeds "
+                        f"the payment total ({pr.total})"
+                        f" (already returned: {total_returned}, "
+                        f"this return: {total_this_return})",
+                    ),
+                )
                 self.error = True
                 self.error_txt = json.dumps(
                     {"error": error[0], "errortxt": str(error[1])},
                 )
                 self.save()
                 logger.error(
-                    f"PT12: Payment {pr.locator} already returned, "
-                    "action not allowed",
+                    "PT12: Total amount of returns "
+                    f"({total_returned + total_this_return}) "
+                    f"would exceeds the payment total ({pr.total}) "
+                    f"for payment {pr.locator} "
+                    f"(already returned: {total_returned}, "
+                    f"this return: {total_this_return}) ",
                 )
                 raise PaymentError(*error)
 
@@ -3326,17 +3393,21 @@ class PaymentReturn(CodenerixModel):
         if unique_order_no:
             # Notify Yeepay
             merchant_number = config.get("merchant_number", None)
-            request = {
+            if self.amount:
+                refund_amount = self.amount
+            else:
+                refund_amount = self.payment.total
+            yeepay_request = {
                 "merchantNo": merchant_number,
                 "refundRequestId": self.return_order_ref,
-                "refundAmount": round(float(self.payment.total), 2),
+                "refundAmount": round(float(refund_amount), 2),
                 "parentMerchantNo": merchant_number,
                 "orderId": self.payment.order_ref,
                 "uniqueOrderNo": unique_order_no,
             }
 
             # Register request
-            self.request = json.dumps(request)
+            self.request = json.dumps(yeepay_request)
             self.request_date = timezone.now()
 
             # Do request
@@ -3344,7 +3415,7 @@ class PaymentReturn(CodenerixModel):
             try:
                 answer = client.post(
                     api="/rest/v1.0/trade/refund",
-                    post_params=request,
+                    post_params=yeepay_request,
                 )
             except Exception as e:
                 answer = None
@@ -3360,7 +3431,7 @@ class PaymentReturn(CodenerixModel):
 
             # Analize answer
             if answer:
-                print(answer)
+                # print(answer)
                 code = answer.get("result", {}).get("code", None)
                 message = answer.get("result", {}).get("message", None)
                 if code != "OPR00000" or message != "成功":

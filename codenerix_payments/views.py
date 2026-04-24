@@ -96,15 +96,23 @@ class PaymentRequestList(GenList):
     show_details = True
     default_ordering = ["-request_date"]
     gentranslate = {
+        "refund_title": _("Refunding payment request"),
+        "max_refundable_amount": _("Maximum refundable amount"),
+        "amount": _("Amount"),
         "pay": __("Pay"),
         "paid": __("Paid"),
         "yes": __("Yes"),
         "no": __("No"),
+        "close": __("Close"),
         "cancel": __("Cancel"),
         "cancelled": __("Cancelled"),
         "return": __("Refund"),
-        "returned": __("Refunded"),
+        "refund": __("Refund"),
+        "partial_refunded": __("Partially Refunded"),
+        "partial_refund": __("Partial Refund"),
+        "refunded": __("Refunded"),
         "error": __("Error"),
+        "errortxt": __("Error Text"),
     }
     extra_context = {
         "menu": ["payments", "paymentrequest"],
@@ -578,6 +586,7 @@ class PaymentAction(View):
                             reverse_target = "CNDX_payments_return"
                         else:
                             answer["error"] = "P006"
+                            answer["errortxt"] = _("User not authenticated")
                             logger.error(
                                 f"P006: User not authenticated"
                                 f"PaymentRequest with locator '{locator}'.",
@@ -684,12 +693,13 @@ class PaymentConfirmationAutorender(View):
             pr = None
 
         # Check if it is already paid
-        paid = pr.paymentanswers.filter(ref__isnull=False).first()
+        paid = pr.paymentanswers.filter(ref__isnull=False, error=False).first()
 
         # Build context
         context = {}
         context["request"] = pr
-        context["confirmation"] = paid
+        context["paid"] = paid
+        context["refund"] = pr.returned
         context["error"] = kwargs.get("error", None)
         context["errortxt"] = kwargs.get("errortxt", None)
         context["action"] = kwargs.get("action", None)
@@ -737,9 +747,10 @@ class Verifysign(View):
     @method_decorator(login_required)
     def get(self, request, *args, **kwargs):
         answer = {"hola": "OK"}
+        """
         print(request.__dict__)
         print(request.GET)
-        """
+        print("_______________________")
         print(request._post.keys())
         print(len(request._post.keys()))
         print("_______________________")

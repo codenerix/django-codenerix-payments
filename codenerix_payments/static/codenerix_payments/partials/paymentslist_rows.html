@@ -19,21 +19,32 @@
 <td ng-click="$event.stopPropagation();" ng-controller="codenerixPaymentRequestCtrl">
 
     <span ng-if='row.is_paid || row.cancelled'>
-        <span ng-if='row.is_paid && (!row.cancelled) && (row.returned)'>
-            <button class='btn btn-warning btn-xs'>{{data.meta.gentranslate.returned}}</button>
+        <span ng-if='row.is_paid && (!row.cancelled) && (row.returned=="A")'>
+            <button
+                title="Refunded: {{row.total_returned}} {{row.currency}}"
+                class='btn btn-warning btn-xs'>{{data.meta.gentranslate.refunded}}</button>
         </span>
         <span
             ng-init="showRefundButton=false"
             ng-mouseenter="showRefundButton=true"
             ng-mouseleave="showRefundButton=false"
-            ng-if='row.is_paid && (!row.cancelled) && (!row.returned)'>
+            ng-if='row.is_paid && (!row.cancelled) && ((row.returned=="N") || (row.returned=="P"))'>
             <button
+                ng-if="row.returned=='N'"
                 ng-hide="showRefundButton"
                 class='btn btn-success btn-xs'>{{data.meta.gentranslate.paid}}</button>
             <button
-                ng-click="submit_return(row.locator, row.return_msg, data.meta.context.returnurl)"
+                ng-if="row.returned=='P'"
+                ng-hide="showRefundButton"
+                class='btn btn-warning btn-xs'>{{data.meta.gentranslate.partial_refunded}}</button>
+            <button
+                ng-click="submit_return(row, data.meta.context.returnurl)"
                 ng-show="showRefundButton"
-                class='btn btn-info btn-xs'>{{data.meta.gentranslate.return}}</button>
+                title="Refunded: {{row.total_returned}} {{row.currency}} | Max refundable: {{row.total - row.total_returned}} {{row.currency}}"
+                class='btn btn-info btn-xs'>
+                    <span ng-show="row.returned!='P'">{{data.meta.gentranslate.refund}}</span>
+                    <span ng-show="row.returned=='P'">{{data.meta.gentranslate.partial_refund}}</span>
+            </button>
         </span>
         <span ng-if='!row.is_paid && row.cancelled'>
             <button class='btn btn-secondary btn-xs'>{{data.meta.gentranslate.cancelled}}</button>
