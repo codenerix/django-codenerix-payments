@@ -6,6 +6,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Stable]
 
+## [4.0.16] - 2026-04-27
+### Bugfix
+- Round up max refundable value to 2 decimals
+
 ## [4.0.15] - 2026-04-27
 ### Bugfix
 - Template now renders correctly when the user doesn't request json response
