@@ -583,7 +583,6 @@ class PaymentAction(View):
                                 answer["error"] = "PT{:02d}".format(e.args[0])
                                 if settings.DEBUG:
                                     answer["errortxt"] = str(e.args[1])
-                            reverse_target = "CNDX_payments_return"
                         else:
                             answer["error"] = "P006"
                             answer["errortxt"] = _("User not authenticated")
@@ -591,9 +590,9 @@ class PaymentAction(View):
                                 f"P006: User not authenticated"
                                 f"PaymentRequest with locator '{locator}'.",
                             )
-                            # We will return a JSON answer with the error, but
-                            # we will not process the return
-                            reverse_target = None
+
+                        # The return URL is different for refunds
+                        reverse_target = "CNDX_payments_return"
 
                         # Check if the user expected a JSON answer
                         answer_json = (
