@@ -6,6 +6,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Stable]
 
+## [4.0.17] - 2026-04-27
+### Bugfix
+- Round up max refundable value to 2 decimals in the list
+
 ## [4.0.16] - 2026-04-27
 ### Bugfix
 - Round up max refundable value to 2 decimals
