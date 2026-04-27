@@ -41,7 +41,7 @@ angular
 
             var title = $scope.data.meta.gentranslate.refund_title + " " + row.order + `(`+ row.order_ref+`)`;
             var amount = 0;
-            var max_amount = Math.round((Number(max_amount) + Number.EPSILON) * 100) / 100;
+            var max_amount = Math.round((row.total - row.total_returned + Number.EPSILON) * 100) / 100;
             var static_url = $scope.data.meta.url_static;
             var template = '<div class=\'modal-body text-center h1\' codenerix-html-compile=\'refundmodal.html\'></div>';
             $scope.refundmodal = {'html': `
